@@ -58,7 +58,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     uid = q.from_user.id
 
-    # BUY MENU
+    # меню покупки
     if q.data == "buy":
         kb = [
             [InlineKeyboardButton("⭐ 100 Stars / 7 days", callback_data="sub_7")],
@@ -66,10 +66,9 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await q.message.edit_text("Choose subscription:", reply_markup=InlineKeyboardMarkup(kb))
 
-    # START PAYMENT
+    # запуск оплати
     elif q.data.startswith("sub_"):
         days = int(q.data.split("_")[1])
-
         price = 100 if days == 7 else 300
 
         await context.bot.send_invoice(
@@ -119,14 +118,11 @@ async def ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         answer = response.choices[0].message.content
         await update.message.reply_text(answer)
 
-    except Exception as e:
+    except Exception:
         await update.message.reply_text("❌ AI error (check OPENAI_KEY)")
 
 # ---------------- APP ----------------
 app = ApplicationBuilder().token(TOKEN).build()
-
-# 💣 FIX: прибирає conflict
-app.bot.delete_webhook(drop_pending_updates=True)
 
 # handlers
 app.add_handler(CommandHandler("start", start))
@@ -135,5 +131,5 @@ app.add_handler(PreCheckoutQueryHandler(precheckout))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_handler))
 
-# запуск
-app.run_polling()
+# запуск (правильний)
+app.run_polling(drop_pending_updates=True)
