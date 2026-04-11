@@ -21,14 +21,13 @@ cur = conn.cursor()
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY,
-    sub_end TEXT,
-    mode TEXT
+    sub_end TEXT
 )
 """)
 
 conn.commit()
 
-# ---------------- SUBSCRIPTION ----------------
+# ---------------- SUB ----------------
 def is_sub(uid):
     cur.execute("SELECT sub_end FROM users WHERE user_id=?", (uid,))
     r = cur.fetchone()
@@ -38,7 +37,7 @@ def is_sub(uid):
 
 def set_sub(uid, days):
     end = datetime.now() + timedelta(days=days)
-    cur.execute("INSERT OR REPLACE INTO users (user_id, sub_end) VALUES (?,?)",
+    cur.execute("INSERT OR REPLACE INTO users VALUES (?,?)",
                 (uid, end.isoformat()))
     conn.commit()
 
@@ -56,7 +55,6 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     uid = q.from_user.id
 
-    # BUY MENU
     if q.data == "buy":
         kb = [
             [InlineKeyboardButton("⭐ 100 Stars / 7 days", callback_data="sub_7")],
@@ -64,7 +62,6 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await q.message.edit_text("Choose plan:", reply_markup=InlineKeyboardMarkup(kb))
 
-    # REAL STARS PAYMENT
     elif q.data.startswith("sub_"):
         days = int(q.data.split("_")[1])
 
@@ -82,7 +79,7 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def precheckout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
 
-# ---------------- SUCCESS PAYMENT ----------------
+# ---------------- SUCCESS ----------------
 async def success(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     payload = update.message.successful_payment.invoice_payload
@@ -92,12 +89,11 @@ async def success(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif "sub_30" in payload:
         set_sub(uid, 30)
 
-    await update.message.reply_text("✅ Payment successful! You now have PRO access.")
+    await update.message.reply_text("✅ Payment successful!")
 
-# ---------------- GPT AI ----------------
+# ---------------- AI ----------------
 async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
-    text = update.message.text
 
     if not is_sub(uid):
         await update.message.reply_text("❌ Buy subscription first")
@@ -108,22 +104,34 @@ async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful tutor."},
-                {"role": "user", "content": text}
+                {"role": "user", "content": update.message.text}
             ]
         )
 
         await update.message.reply_text(resp.choices[0].message.content)
 
-    except Exception as e:
-        await update.message.reply_text("AI error. Check API key.")
+    except Exception:
+        await update.message.reply_text("❌ AI error (check OPENAI_KEY)")
 
 # ---------------- APP ----------------
 app = ApplicationBuilder().token(TOKEN).build()
 
+# 💣 ВАЖЛИВО — ФІКС CONFLICT
+import asyncio
+
+async def main():
+    await app.initialize()
+    await app.bot.delete_webhook(drop_pending_updates=True)
+    await app.start()
+    await app.updater.start_polling()
+    await app.idle()
+
+# handlers
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(callback))
 app.add_handler(PreCheckoutQueryHandler(precheckout))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, success))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai))
 
-app.run_polling()
+if __name__ == "__main__":
+    asyncio.run(main())
