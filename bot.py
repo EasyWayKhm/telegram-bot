@@ -1,13 +1,16 @@
 import os
 import sqlite3
 from datetime import datetime, timedelta
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     MessageHandler, ContextTypes, PreCheckoutQueryHandler, filters
 )
+
 from openai import OpenAI
 
+# ---------------- CONFIG ----------------
 TOKEN = os.getenv("TOKEN")
 OPENAI_KEY = os.getenv("OPENAI_KEY")
 OWNER_ID = 510644962
@@ -27,13 +30,13 @@ CREATE TABLE IF NOT EXISTS users (
 
 conn.commit()
 
-# ---------------- SUB ----------------
+# ---------------- SUB SYSTEM ----------------
 def is_sub(uid):
     cur.execute("SELECT sub_end FROM users WHERE user_id=?", (uid,))
-    r = cur.fetchone()
-    if not r or not r[0]:
+    row = cur.fetchone()
+    if not row or not row[0]:
         return False
-    return datetime.fromisoformat(r[0]) > datetime.now()
+    return datetime.fromisoformat(row[0]) > datetime.now()
 
 def set_sub(uid, days):
     end = datetime.now() + timedelta(days=days)
@@ -47,7 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🤖 AI Tutor", callback_data="ai")],
         [InlineKeyboardButton("💰 Buy subscription", callback_data="buy")]
     ]
-    await update.message.reply_text("PRO SaaS Bot 🚀", reply_markup=InlineKeyboardMarkup(kb))
+    await update.message.reply_text("🚀 PRO SaaS Bot", reply_markup=InlineKeyboardMarkup(kb))
 
 # ---------------- CALLBACK ----------------
 async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -55,83 +58,82 @@ async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.answer()
     uid = q.from_user.id
 
+    # BUY MENU
     if q.data == "buy":
         kb = [
             [InlineKeyboardButton("⭐ 100 Stars / 7 days", callback_data="sub_7")],
             [InlineKeyboardButton("⭐ 300 Stars / 30 days", callback_data="sub_30")]
         ]
-        await q.message.edit_text("Choose plan:", reply_markup=InlineKeyboardMarkup(kb))
+        await q.message.edit_text("Choose subscription:", reply_markup=InlineKeyboardMarkup(kb))
 
+    # START PAYMENT
     elif q.data.startswith("sub_"):
         days = int(q.data.split("_")[1])
 
+        price = 100 if days == 7 else 300
+
         await context.bot.send_invoice(
             chat_id=uid,
-            title="PRO Access",
-            description=f"{days} days subscription",
+            title="PRO Subscription",
+            description=f"{days} days access",
             payload=f"sub_{days}",
-            provider_token="",
+            provider_token="",  # Telegram Stars
             currency="XTR",
-            prices=[LabeledPrice("Stars", 100 if days == 7 else 300)]
+            prices=[LabeledPrice("Subscription", price)]
         )
 
 # ---------------- PRECHECKOUT ----------------
 async def precheckout(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.pre_checkout_query.answer(ok=True)
 
-# ---------------- SUCCESS ----------------
-async def success(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ---------------- SUCCESS PAYMENT ----------------
+async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
     payload = update.message.successful_payment.invoice_payload
 
-    if "sub_7" in payload:
+    if payload == "sub_7":
         set_sub(uid, 7)
-    elif "sub_30" in payload:
+    elif payload == "sub_30":
         set_sub(uid, 30)
 
-    await update.message.reply_text("✅ Payment successful!")
+    await update.message.reply_text("✅ Subscription activated!")
 
 # ---------------- AI ----------------
-async def ai(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.message.from_user.id
+    text = update.message.text
 
     if not is_sub(uid):
         await update.message.reply_text("❌ Buy subscription first")
         return
 
     try:
-        resp = client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful tutor."},
-                {"role": "user", "content": update.message.text}
+                {"role": "user", "content": text}
             ]
         )
 
-        await update.message.reply_text(resp.choices[0].message.content)
+        answer = response.choices[0].message.content
+        await update.message.reply_text(answer)
 
-    except Exception:
+    except Exception as e:
         await update.message.reply_text("❌ AI error (check OPENAI_KEY)")
 
 # ---------------- APP ----------------
 app = ApplicationBuilder().token(TOKEN).build()
 
-# 💣 ВАЖЛИВО — ФІКС CONFLICT
-import asyncio
-
-async def main():
-    await app.initialize()
-    await app.bot.delete_webhook(drop_pending_updates=True)
-    await app.start()
-    await app.updater.start_polling()
-    await app.idle()
+# 💣 FIX: прибирає conflict
+app.bot.delete_webhook(drop_pending_updates=True)
 
 # handlers
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(callback))
 app.add_handler(PreCheckoutQueryHandler(precheckout))
-app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, success))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai))
+app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_handler))
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# запуск
+app.run_polling()
