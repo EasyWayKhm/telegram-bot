@@ -19,13 +19,16 @@ DB_PATH = os.getenv("DB_PATH", "bot.db")
 if not API_TOKEN:
     raise ValueError("API_TOKEN not found. Add it to .env or Railway Variables.")
 
+db_dir = os.path.dirname(DB_PATH)
+if db_dir:
+    os.makedirs(db_dir, exist_ok=True)
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
 user_state = {}
-user_lang_manual = {}
 
 LANG_BUTTONS = {
     "🇺🇦 Українська": "ua",
@@ -105,7 +108,7 @@ TEXTS = {
         "profile_until": "Преміум активний до",
         "premium_text": "💎 Меню Premium",
         "complain_text": "⚠️ Напиши свою скаргу одним повідомленням, і адміністратор її побачить.",
-        "complaint_sent": "✅ Скаргу відправлено адміністратору.",
+        "complaint_sent": "✅ Скаргу відправлено адміністраторам.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
         "premium_profile_activated": "💎 Преміум профіль активовано на 30 днів.",
         "ask_admin_login": "Введи логін адміністратора:",
@@ -113,6 +116,12 @@ TEXTS = {
         "admin_login_success": "✅ Вхід адміністратора успішний.",
         "admin_login_fail": "❌ Невірний логін або пароль.",
         "admin_logged_out": "✅ Адмін-режим вимкнено.",
+        "complaint_header": "⚠️ Нова скарга",
+        "complaint_user_id": "ID користувача",
+        "complaint_username": "Username",
+        "complaint_language": "Мова",
+        "complaint_profile": "Профіль",
+        "complaint_text_label": "Текст скарги",
     },
     "ru": {
         "language_text": (
@@ -155,7 +164,7 @@ TEXTS = {
         "profile_until": "Премиум активен до",
         "premium_text": "💎 Меню Premium",
         "complain_text": "⚠️ Напишите вашу жалобу одним сообщением, и администратор её увидит.",
-        "complaint_sent": "✅ Жалоба отправлена администратору.",
+        "complaint_sent": "✅ Жалоба отправлена администраторам.",
         "send_file_now": "📎 Теперь можете отправить файл.",
         "premium_profile_activated": "💎 Премиум профиль активирован на 30 дней.",
         "ask_admin_login": "Введите логин администратора:",
@@ -163,6 +172,12 @@ TEXTS = {
         "admin_login_success": "✅ Вход администратора успешный.",
         "admin_login_fail": "❌ Неверный логин или пароль.",
         "admin_logged_out": "✅ Админ-режим выключен.",
+        "complaint_header": "⚠️ Новая жалоба",
+        "complaint_user_id": "ID пользователя",
+        "complaint_username": "Username",
+        "complaint_language": "Язык",
+        "complaint_profile": "Профиль",
+        "complaint_text_label": "Текст жалобы",
     },
     "en": {
         "language_text": (
@@ -204,8 +219,8 @@ TEXTS = {
         "profile_status": "Status",
         "profile_until": "Premium active until",
         "premium_text": "💎 Premium menu",
-        "complain_text": "⚠️ Send your complaint in one message, and the administrator will receive it.",
-        "complaint_sent": "✅ Complaint sent to the administrator.",
+        "complain_text": "⚠️ Send your complaint in one message, and the administrators will receive it.",
+        "complaint_sent": "✅ Complaint sent to administrators.",
         "send_file_now": "📎 Now you can send your file.",
         "premium_profile_activated": "💎 Premium profile activated for 30 days.",
         "ask_admin_login": "Enter admin login:",
@@ -213,6 +228,12 @@ TEXTS = {
         "admin_login_success": "✅ Admin login successful.",
         "admin_login_fail": "❌ Wrong login or password.",
         "admin_logged_out": "✅ Admin mode disabled.",
+        "complaint_header": "⚠️ New complaint",
+        "complaint_user_id": "User ID",
+        "complaint_username": "Username",
+        "complaint_language": "Language",
+        "complaint_profile": "Profile",
+        "complaint_text_label": "Complaint text",
     },
     "de": {},
     "fr": {},
@@ -221,7 +242,6 @@ TEXTS = {
     "fi": {},
 }
 
-# Fallback for additional languages
 for code in ["de", "fr", "it", "es", "fi", "kk", "id", "ms", "km", "pl", "pt", "uz"]:
     if code not in TEXTS or not TEXTS[code]:
         TEXTS[code] = dict(TEXTS["en"])
@@ -234,6 +254,7 @@ def db():
 def init_db():
     conn = db()
     cur = conn.cursor()
+
     cur.execute("""
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -244,6 +265,13 @@ def init_db():
             pending_payment TEXT
         )
     """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            user_id INTEGER PRIMARY KEY
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -253,12 +281,14 @@ def ensure_user(user_id: int):
     cur = conn.cursor()
     cur.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
     row = cur.fetchone()
+
     if not row:
         cur.execute("""
             INSERT INTO users (user_id, language, manual_language, is_admin, premium_until, pending_payment)
             VALUES (?, 'ua', 0, 0, NULL, NULL)
         """, (user_id,))
         conn.commit()
+
     conn.close()
 
 
@@ -273,6 +303,7 @@ def get_user(user_id: int):
     """, (user_id,))
     row = cur.fetchone()
     conn.close()
+
     return {
         "user_id": row[0],
         "language": row[1],
@@ -296,13 +327,51 @@ def update_user_language(user_id: int, language: str, manual: bool):
     conn.close()
 
 
+def add_admin(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def remove_admin(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM admins WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_all_admin_ids():
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM admins")
+    rows = cur.fetchall()
+    conn.close()
+
+    admin_ids = [row[0] for row in rows]
+
+    if OWNER_ID not in admin_ids:
+        admin_ids.append(OWNER_ID)
+
+    return admin_ids
+
+
 def set_admin(user_id: int, is_admin: bool):
     ensure_user(user_id)
+
     conn = db()
     cur = conn.cursor()
     cur.execute("UPDATE users SET is_admin = ? WHERE user_id = ?", (1 if is_admin else 0, user_id))
     conn.commit()
     conn.close()
+
+    if is_admin:
+        add_admin(user_id)
+    else:
+        if user_id != OWNER_ID:
+            remove_admin(user_id)
 
 
 def set_pending_payment(user_id: int, payment_type: str | None):
@@ -373,11 +442,18 @@ def premium_until_text(user_id: int):
     clear_premium_if_expired(user_id)
     user = get_user(user_id)
     premium_until = user["premium_until"]
+
     if not premium_until:
         return None
 
     dt = datetime.fromisoformat(premium_until)
     return dt.strftime("%Y-%m-%d %H:%M UTC")
+
+
+def get_profile_status_text(user_id: int, lang: str = "ua"):
+    if is_premium(user_id):
+        return TEXTS[lang]["profile_premium"]
+    return TEXTS[lang]["profile_basic"]
 
 
 def detect_user_language(language_code: str):
@@ -596,7 +672,6 @@ async def set_language(message: types.Message):
     previous_state = user_state.get(message.from_user.id, "start_language")
 
     update_user_language(message.from_user.id, lang, manual=True)
-    user_lang_manual[message.from_user.id] = True
 
     if previous_state == "language_menu":
         user_state[message.from_user.id] = "extra_menu"
@@ -720,13 +795,38 @@ async def menu(message: types.Message):
 
     if state == "complaint_wait":
         complaint_text = message.text
+        user_id = message.from_user.id
+        user = get_user(user_id)
 
-        caption = f"⚠️ New complaint\nUser ID: {message.from_user.id}\n"
+        profile_status = get_profile_status_text(user_id, lang)
+        language_name = LANG_NAMES.get(user["language"], user["language"])
+
+        caption_lines = [
+            TEXTS[lang]["complaint_header"],
+            f"{TEXTS[lang]['complaint_user_id']}: {user_id}",
+            f"{TEXTS[lang]['complaint_language']}: {language_name}",
+            f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
+        ]
+
         if message.from_user.username:
-            caption += f"Username: @{message.from_user.username}\n"
-        caption += f"\n{complaint_text}"
+            caption_lines.append(f"{TEXTS[lang]['complaint_username']}: @{message.from_user.username}")
 
-        await bot.send_message(OWNER_ID, caption)
+        premium_until = premium_until_text(user_id)
+        if premium_until:
+            caption_lines.append(f"{TEXTS[lang]['profile_until']}: {premium_until}")
+
+        caption_lines.append("")
+        caption_lines.append(f"{TEXTS[lang]['complaint_text_label']}:")
+        caption_lines.append(complaint_text)
+
+        caption = "\n".join(caption_lines)
+
+        for admin_id in get_all_admin_ids():
+            try:
+                await bot.send_message(admin_id, caption)
+            except Exception as e:
+                logging.warning(f"Failed to send complaint to admin {admin_id}: {e}")
+
         user_state[message.from_user.id] = "main"
         await message.answer(TEXTS[lang]["complaint_sent"], reply_markup=get_main_menu(lang))
         return
@@ -842,6 +942,7 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     set_admin(OWNER_ID, True)
+    add_admin(OWNER_ID)
     await set_bot_commands()
 
 
