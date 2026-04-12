@@ -1,135 +1,168 @@
-import os
-import sqlite3
-from datetime import datetime, timedelta
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
+from aiogram.utils import executor
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    MessageHandler, ContextTypes, PreCheckoutQueryHandler, filters
-)
+API_TOKEN = 8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368
+OWNER_ID = 510644962  # your Telegram ID
 
-from openai import OpenAI
+logging.basicConfig(level=logging.INFO)
 
-# ---------------- CONFIG ----------------
-TOKEN = os.getenv("TOKEN")
-OPENAI_KEY = os.getenv("OPENAI_KEY")
-OWNER_ID = 510644962
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
 
-client = OpenAI(api_key=OPENAI_KEY)
+# Store user language and payment status
+user_lang = {}
+user_payment = {}  # user_id: 'task' or 'complex'
 
-# ---------------- DB ----------------
-conn = sqlite3.connect("bot.db", check_same_thread=False)
-cur = conn.cursor()
+# Texts for all languages
+TEXTS = {
+    'ua': {
+        'start': 'Вітаю з підпискою! 👋\n\nВибери мову бота',
+        'task': 'Виконати завдання🙏',
+        'tutor': 'Потрібен репетитор💪',
+        'one': 'Одне завдання',
+        'complex': 'Комплексне виконання роботи',
+        'pay_success': '✅ Оплата пройшла! Надішли файл.',
+        'file_sent': '📩 Файл відправлено!',
+        'no_payment': '❌ Спочатку потрібно оплатити!'
+    },
+    'en': {
+        'start': 'Congratulations on subscribing! 👋\n\nSelect the bot language',
+        'task': 'Do the task🙏',
+        'tutor': 'Need a tutor💪',
+        'one': 'Single task',
+        'complex': 'Complex work',
+        'pay_success': '✅ Payment successful! Send your file.',
+        'file_sent': '📩 File sent!',
+        'no_payment': '❌ You must pay first!'
+    },
+    'ru': {
+        'start': 'Поздравляем с подпиской! 👋\n\nВыберите язык бота',
+        'task': 'Выполнить задание🙏',
+        'tutor': 'Нужен репетитор💪',
+        'one': 'Одно задание',
+        'complex': 'Комплексная работа',
+        'pay_success': '✅ Оплата прошла! Отправьте файл.',
+        'file_sent': '📩 Файл отправлен!',
+        'no_payment': '❌ Сначала нужно оплатить!'
+    },
+    'fi': {
+        'start': 'Onnittelut tilauksestasi! 👋\n\nValitse botin kieli',
+        'task': 'Suorita tehtävä🙏',
+        'tutor': 'Tarvitsetko opettajan💪',
+        'one': 'Yksi tehtävä',
+        'complex': 'Laajempi työ',
+        'pay_success': '✅ Maksu onnistui! Lähetä tiedosto.',
+        'file_sent': '📩 Tiedosto lähetetty!',
+        'no_payment': '❌ Sinun täytyy maksaa ensin!'
+    }
+}
 
-cur.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY,
-    sub_end TEXT
-)
-""")
+# Language keyboard
+lang_kb = ReplyKeyboardMarkup(resize_keyboard=True)
+lang_kb.add(KeyboardButton('Українська'), KeyboardButton('English'))
+lang_kb.add(KeyboardButton('Русский'), KeyboardButton('Suomi'))
 
-conn.commit()
+LANG_MAP = {
+    'Українська': 'ua',
+    'English': 'en',
+    'Русский': 'ru',
+    'Suomi': 'fi'
+}
 
-# ---------------- SUB SYSTEM ----------------
-def is_sub(uid):
-    cur.execute("SELECT sub_end FROM users WHERE user_id=?", (uid,))
-    row = cur.fetchone()
-    if not row or not row[0]:
-        return False
-    return datetime.fromisoformat(row[0]) > datetime.now()
+@dp.message_handler(commands=['start'])
+async def start(msg: types.Message):
+    text = """Вітаю з підпискою! 👋 
 
-def set_sub(uid, days):
-    end = datetime.now() + timedelta(days=days)
-    cur.execute("INSERT OR REPLACE INTO users VALUES (?,?)",
-                (uid, end.isoformat()))
-    conn.commit()
+Вибери мову бота
+Congratulations on subscribing! 👋
+Select the bot language
+Поздравляем с подпиской! 👋
+Выберите язык бота
+Onnittelut tilauksestasi! 👋
+Valitse botin kieli"""
+    await msg.answer(text, reply_markup=lang_kb)
 
-# ---------------- START ----------------
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    kb = [
-        [InlineKeyboardButton("🤖 AI Tutor", callback_data="ai")],
-        [InlineKeyboardButton("💰 Buy subscription", callback_data="buy")]
-    ]
-    await update.message.reply_text("🚀 PRO SaaS Bot", reply_markup=InlineKeyboardMarkup(kb))
+@dp.message_handler(lambda m: m.text in LANG_MAP)
+async def set_language(msg: types.Message):
+    lang = LANG_MAP[msg.text]
+    user_lang[msg.from_user.id] = lang
 
-# ---------------- CALLBACK ----------------
-async def callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query
-    await q.answer()
-    uid = q.from_user.id
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add(TEXTS[lang]['task'], TEXTS[lang]['tutor'])
 
-    # меню покупки
-    if q.data == "buy":
-        kb = [
-            [InlineKeyboardButton("⭐ 100 Stars / 7 days", callback_data="sub_7")],
-            [InlineKeyboardButton("⭐ 300 Stars / 30 days", callback_data="sub_30")]
-        ]
-        await q.message.edit_text("Choose subscription:", reply_markup=InlineKeyboardMarkup(kb))
+    await msg.answer(TEXTS[lang]['start'], reply_markup=kb)
 
-    # запуск оплати
-    elif q.data.startswith("sub_"):
-        days = int(q.data.split("_")[1])
-        price = 100 if days == 7 else 300
+@dp.message_handler()
+async def menu(msg: types.Message):
+    lang = user_lang.get(msg.from_user.id, 'ua')
 
-        await context.bot.send_invoice(
-            chat_id=uid,
-            title="PRO Subscription",
-            description=f"{days} days access",
-            payload=f"sub_{days}",
-            provider_token="",  # Telegram Stars
+    if msg.text == TEXTS[lang]['task']:
+        kb = ReplyKeyboardMarkup(resize_keyboard=True)
+        kb.add(TEXTS[lang]['one'], TEXTS[lang]['complex'])
+        await msg.answer('👇', reply_markup=kb)
+
+    elif msg.text == TEXTS[lang]['one']:
+        await bot.send_invoice(
+            chat_id=msg.chat.id,
+            title="Task Payment",
+            description="Single task",
+            payload="task_payment",
             currency="XTR",
-            prices=[LabeledPrice("Subscription", price)]
+            prices=[LabeledPrice(label="Task", amount=100)],
+            start_parameter="task"
         )
 
-# ---------------- PRECHECKOUT ----------------
-async def precheckout(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.pre_checkout_query.answer(ok=True)
+    elif msg.text == TEXTS[lang]['complex']:
+        await bot.send_invoice(
+            chat_id=msg.chat.id,
+            title="Complex Payment",
+            description="Complex work",
+            payload="complex_payment",
+            currency="XTR",
+            prices=[LabeledPrice(label="Complex", amount=500)],
+            start_parameter="complex"
+        )
 
-# ---------------- SUCCESS PAYMENT ----------------
-async def successful_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.message.from_user.id
-    payload = update.message.successful_payment.invoice_payload
+# Pre-checkout
+@dp.pre_checkout_query_handler(lambda query: True)
+async def pre_checkout(pre_checkout_q: types.PreCheckoutQuery):
+    await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
-    if payload == "sub_7":
-        set_sub(uid, 7)
-    elif payload == "sub_30":
-        set_sub(uid, 30)
+# Successful payment
+@dp.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT)
+async def got_payment(msg: types.Message):
+    lang = user_lang.get(msg.from_user.id, 'ua')
 
-    await update.message.reply_text("✅ Subscription activated!")
+    payload = msg.successful_payment.invoice_payload
 
-# ---------------- AI ----------------
-async def ai_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.message.from_user.id
-    text = update.message.text
+    if payload == 'task_payment':
+        user_payment[msg.from_user.id] = 'task'
+    elif payload == 'complex_payment':
+        user_payment[msg.from_user.id] = 'complex'
 
-    if not is_sub(uid):
-        await update.message.reply_text("❌ Buy subscription first")
+    await msg.answer(TEXTS[lang]['pay_success'])
+
+# File handler with payment check
+@dp.message_handler(content_types=types.ContentType.DOCUMENT)
+async def handle_file(msg: types.Message):
+    lang = user_lang.get(msg.from_user.id, 'ua')
+
+    if msg.from_user.id not in user_payment:
+        await msg.answer(TEXTS[lang]['no_payment'])
         return
 
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful tutor."},
-                {"role": "user", "content": text}
-            ]
-        )
+    order_type = user_payment[msg.from_user.id]
 
-        answer = response.choices[0].message.content
-        await update.message.reply_text(answer)
+    caption = f"📥 New order: {order_type}\nUser: {msg.from_user.id}"
 
-    except Exception:
-        await update.message.reply_text("❌ AI error (check OPENAI_KEY)")
+    await bot.send_document(OWNER_ID, msg.document.file_id, caption=caption)
 
-# ---------------- APP ----------------
-app = ApplicationBuilder().token(TOKEN).build()
+    await msg.answer(TEXTS[lang]['file_sent'])
 
-# handlers
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(callback))
-app.add_handler(PreCheckoutQueryHandler(precheckout))
-app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, ai_handler))
+    # Reset payment after file sent
+    del user_payment[msg.from_user.id]
 
-# запуск (правильний)
-app.run_polling(drop_pending_updates=True)
+if __name__ == '__main__':
+    executor.start_polling(dp, skip_updates=True)
