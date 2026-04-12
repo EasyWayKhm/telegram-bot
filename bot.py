@@ -3,7 +3,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
 from aiogram.utils import executor
 
-API_TOKEN = 8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368
+API_TOKEN = "8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368"
 OWNER_ID = 510644962  # your Telegram ID
 
 logging.basicConfig(level=logging.INFO)
