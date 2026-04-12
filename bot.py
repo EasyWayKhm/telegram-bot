@@ -1,5 +1,7 @@
 import logging
 import os
+import sqlite3
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
@@ -10,6 +12,9 @@ load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
 OWNER_ID = int(os.getenv("OWNER_ID", "510644962"))
+ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "123456")
+DB_PATH = os.getenv("DB_PATH", "bot.db")
 
 if not API_TOKEN:
     raise ValueError("API_TOKEN not found. Add it to .env or Railway Variables.")
@@ -19,8 +24,6 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-user_lang = {}
-user_payment = {}
 user_state = {}
 user_lang_manual = {}
 
@@ -42,6 +45,24 @@ LANG_BUTTONS = {
     "🇺🇿 Oʻzbekcha": "uz",
 }
 
+LANG_NAMES = {
+    "ua": "Українська",
+    "ru": "Русский",
+    "en": "English",
+    "de": "Deutsch",
+    "fr": "Français",
+    "it": "Italiano",
+    "es": "Español",
+    "fi": "Suomi",
+    "kk": "Қазақ",
+    "id": "Indonesia",
+    "ms": "Malay",
+    "km": "ភាសាខ្មែរ",
+    "pl": "Polski",
+    "pt": "Portuguesa",
+    "uz": "Oʻzbekcha",
+}
+
 TEXTS = {
     "ua": {
         "language_text": (
@@ -59,6 +80,8 @@ TEXTS = {
         "complain": "🚫 Поскаржитися",
         "language": "🌍 Мова",
         "back": "⬅️ Назад",
+        "admin_login_btn": "🔐 Вхід адміністратора",
+        "logout_admin_btn": "🚪 Вийти з адмін-режиму",
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
         "premium_profile": "Преміум профіль",
@@ -71,12 +94,25 @@ TEXTS = {
         "file_sent": "📩 Файл відправлено адміністратору.",
         "no_payment": "❌ Спочатку потрібно оплатити.",
         "tutor_reply": "💪 Напиши, який саме репетитор тобі потрібен.",
-        "profile_text": "🧾 Розділ «Моя анкета» в розробці.",
-        "premium_text": "💎 Розділ Premium в розробці.",
+        "profile_title": "👤 Моя анкета",
+        "profile_user": "Користувач",
+        "profile_admin": "Адміністратор",
+        "profile_basic": "Базовий профіль",
+        "profile_premium": "Преміум профіль",
+        "profile_language": "Мова бота",
+        "profile_role": "Тип профілю",
+        "profile_status": "Статус",
+        "profile_until": "Преміум активний до",
+        "premium_text": "💎 Меню Premium",
         "complain_text": "⚠️ Напиши свою скаргу одним повідомленням, і адміністратор її побачить.",
         "complaint_sent": "✅ Скаргу відправлено адміністратору.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
-        "premium_profile_activated": "💎 Преміум профіль активовано.",
+        "premium_profile_activated": "💎 Преміум профіль активовано на 30 днів.",
+        "ask_admin_login": "Введи логін адміністратора:",
+        "ask_admin_password": "Введи пароль адміністратора:",
+        "admin_login_success": "✅ Вхід адміністратора успішний.",
+        "admin_login_fail": "❌ Невірний логін або пароль.",
+        "admin_logged_out": "✅ Адмін-режим вимкнено.",
     },
     "ru": {
         "language_text": (
@@ -94,6 +130,8 @@ TEXTS = {
         "complain": "🚫 Пожаловаться",
         "language": "🌍 Язык",
         "back": "⬅️ Назад",
+        "admin_login_btn": "🔐 Вход администратора",
+        "logout_admin_btn": "🚪 Выйти из админ-режима",
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
         "premium_profile": "Премиум профиль",
@@ -106,12 +144,25 @@ TEXTS = {
         "file_sent": "📩 Файл отправлен администратору.",
         "no_payment": "❌ Сначала нужно оплатить.",
         "tutor_reply": "💪 Напишите, какой именно репетитор вам нужен.",
-        "profile_text": "🧾 Раздел «Моя анкета» в разработке.",
-        "premium_text": "💎 Раздел Premium в разработке.",
+        "profile_title": "👤 Моя анкета",
+        "profile_user": "Пользователь",
+        "profile_admin": "Администратор",
+        "profile_basic": "Базовый профиль",
+        "profile_premium": "Премиум профиль",
+        "profile_language": "Язык бота",
+        "profile_role": "Тип профиля",
+        "profile_status": "Статус",
+        "profile_until": "Премиум активен до",
+        "premium_text": "💎 Меню Premium",
         "complain_text": "⚠️ Напишите вашу жалобу одним сообщением, и администратор её увидит.",
         "complaint_sent": "✅ Жалоба отправлена администратору.",
         "send_file_now": "📎 Теперь можете отправить файл.",
-        "premium_profile_activated": "💎 Премиум профиль активирован.",
+        "premium_profile_activated": "💎 Премиум профиль активирован на 30 дней.",
+        "ask_admin_login": "Введите логин администратора:",
+        "ask_admin_password": "Введите пароль администратора:",
+        "admin_login_success": "✅ Вход администратора успешный.",
+        "admin_login_fail": "❌ Неверный логин или пароль.",
+        "admin_logged_out": "✅ Админ-режим выключен.",
     },
     "en": {
         "language_text": (
@@ -129,6 +180,8 @@ TEXTS = {
         "complain": "🚫 Complain",
         "language": "🌍 Language",
         "back": "⬅️ Back",
+        "admin_login_btn": "🔐 Admin login",
+        "logout_admin_btn": "🚪 Log out admin mode",
         "one": "Single task",
         "complex": "Complex work",
         "premium_profile": "Premium profile",
@@ -141,192 +194,190 @@ TEXTS = {
         "file_sent": "📩 File sent to the administrator.",
         "no_payment": "❌ You need to pay first.",
         "tutor_reply": "💪 Write what kind of tutor you need.",
-        "profile_text": "🧾 The 'My profile' section is under development.",
-        "premium_text": "💎 The Premium section is under development.",
+        "profile_title": "👤 My profile",
+        "profile_user": "User",
+        "profile_admin": "Administrator",
+        "profile_basic": "Basic profile",
+        "profile_premium": "Premium profile",
+        "profile_language": "Bot language",
+        "profile_role": "Profile type",
+        "profile_status": "Status",
+        "profile_until": "Premium active until",
+        "premium_text": "💎 Premium menu",
         "complain_text": "⚠️ Send your complaint in one message, and the administrator will receive it.",
         "complaint_sent": "✅ Complaint sent to the administrator.",
         "send_file_now": "📎 Now you can send your file.",
-        "premium_profile_activated": "💎 Premium profile activated.",
+        "premium_profile_activated": "💎 Premium profile activated for 30 days.",
+        "ask_admin_login": "Enter admin login:",
+        "ask_admin_password": "Enter admin password:",
+        "admin_login_success": "✅ Admin login successful.",
+        "admin_login_fail": "❌ Wrong login or password.",
+        "admin_logged_out": "✅ Admin mode disabled.",
     },
-    "de": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Wähle eine Aktion 👇",
-        "task": "Aufgabe erledigen🙏",
-        "tutor": "Ich brauche einen Tutor💪",
-        "menu_btn": "📋 Menü",
-        "profile": "👤 Mein Profil",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Beschwerde einreichen",
-        "language": "🌍 Sprache",
-        "back": "⬅️ Zurück",
-        "one": "Eine Aufgabe",
-        "complex": "Komplexe Arbeit",
-        "premium_profile": "Premium-Profil",
-        "premium_profile_info": "Einen ganzen Monat lang hast du unbegrenzten Zugang zu Aufgaben in jedem Schulfach",
-        "pay_premium_profile_btn": "Premium-Profil bezahlen (2500⭐)",
-        "choose_service": "👇 Wähle einen Service",
-        "pay_success_task": "✅ Zahlung von 200⭐ war erfolgreich.",
-        "pay_success_complex": "✅ Zahlung von 600⭐ war erfolgreich.",
-        "pay_success_premium_profile": "✅ Zahlung von 2500⭐ für das Premium-Profil war erfolgreich.",
-        "file_sent": "📩 Datei wurde an den Administrator gesendet.",
-        "no_payment": "❌ Bitte zuerst bezahlen.",
-        "tutor_reply": "💪 Schreibe, welchen Tutor du brauchst.",
-        "profile_text": "🧾 Der Bereich „Mein Profil“ ist in Entwicklung.",
-        "premium_text": "💎 Der Premium-Bereich ist in Entwicklung.",
-        "complain_text": "⚠️ Schreibe deine Beschwerde in einer Nachricht, und der Administrator erhält sie.",
-        "complaint_sent": "✅ Beschwerde wurde an den Administrator gesendet.",
-        "send_file_now": "📎 Jetzt kannst du deine Datei senden.",
-        "premium_profile_activated": "💎 Premium-Profil aktiviert.",
-    },
-    "fr": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Choisissez une action 👇",
-        "task": "Faire le devoir🙏",
-        "tutor": "J’ai besoin d’un tuteur💪",
-        "menu_btn": "📋 Menu",
-        "profile": "👤 Mon profil",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Se plaindre",
-        "language": "🌍 Langue",
-        "back": "⬅️ Retour",
-        "one": "Un devoir",
-        "complex": "Travail complexe",
-        "premium_profile": "Profil premium",
-        "premium_profile_info": "Pendant tout le mois, tu auras un accès illimité aux devoirs de n’importe quelle matière scolaire",
-        "pay_premium_profile_btn": "Payer le profil premium (2500⭐)",
-        "choose_service": "👇 Choisissez un service",
-        "pay_success_task": "✅ Le paiement de 200⭐ a réussi.",
-        "pay_success_complex": "✅ Le paiement de 600⭐ a réussi.",
-        "pay_success_premium_profile": "✅ Le paiement de 2500⭐ pour le profil premium a réussi.",
-        "file_sent": "📩 Fichier envoyé à l’administrateur.",
-        "no_payment": "❌ Vous devez payer d’abord.",
-        "tutor_reply": "💪 Écris quel type de tuteur tu veux.",
-        "profile_text": "🧾 La section « Mon profil » est en développement.",
-        "premium_text": "💎 La section Premium est en développement.",
-        "complain_text": "⚠️ Écris ta plainte dans un seul message, et l’administrateur la recevra.",
-        "complaint_sent": "✅ Plainte envoyée à l’administrateur.",
-        "send_file_now": "📎 Maintenant tu peux envoyer ton fichier.",
-        "premium_profile_activated": "💎 Profil premium activé.",
-    },
-    "it": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Scegli un’azione 👇",
-        "task": "Esegui il compito🙏",
-        "tutor": "Ho bisogno di un tutor💪",
-        "menu_btn": "📋 Menu",
-        "profile": "👤 Il mio profilo",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Reclamo",
-        "language": "🌍 Lingua",
-        "back": "⬅️ Indietro",
-        "one": "Un compito",
-        "complex": "Lavoro complesso",
-        "premium_profile": "Profilo premium",
-        "premium_profile_info": "Per tutto il mese avrai accesso illimitato ai compiti di qualsiasi materia scolastica",
-        "pay_premium_profile_btn": "Paga profilo premium (2500⭐)",
-        "choose_service": "👇 Scegli un servizio",
-        "pay_success_task": "✅ Pagamento di 200⭐ riuscito.",
-        "pay_success_complex": "✅ Pagamento di 600⭐ riuscito.",
-        "pay_success_premium_profile": "✅ Pagamento di 2500⭐ per il profilo premium riuscito.",
-        "file_sent": "📩 File inviato all’amministratore.",
-        "no_payment": "❌ Devi prima pagare.",
-        "tutor_reply": "💪 Scrivi di quale tutor hai bisogno.",
-        "profile_text": "🧾 La sezione 'Il mio profilo' è in sviluppo.",
-        "premium_text": "💎 La sezione Premium è in sviluppo.",
-        "complain_text": "⚠️ Scrivi il tuo reclamo in un solo messaggio e l’amministratore lo riceverà.",
-        "complaint_sent": "✅ Reclamo inviato all’amministratore.",
-        "send_file_now": "📎 Ora puoi inviare il file.",
-        "premium_profile_activated": "💎 Profilo premium attivato.",
-    },
-    "es": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Elige una acción 👇",
-        "task": "Hacer la tarea🙏",
-        "tutor": "Necesito un tutor💪",
-        "menu_btn": "📋 Menú",
-        "profile": "👤 Mi perfil",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Quejarse",
-        "language": "🌍 Idioma",
-        "back": "⬅️ Atrás",
-        "one": "Una tarea",
-        "complex": "Trabajo complejo",
-        "premium_profile": "Perfil premium",
-        "premium_profile_info": "Durante todo el mes tendrás acceso ilimitado a tareas de cualquier materia escolar",
-        "pay_premium_profile_btn": "Pagar perfil premium (2500⭐)",
-        "choose_service": "👇 Elige un servicio",
-        "pay_success_task": "✅ El pago de 200⭐ fue exitoso.",
-        "pay_success_complex": "✅ El pago de 600⭐ fue exitoso.",
-        "pay_success_premium_profile": "✅ El pago de 2500⭐ para el perfil premium fue exitoso.",
-        "file_sent": "📩 Archivo enviado al administrador.",
-        "no_payment": "❌ Primero debes pagar.",
-        "tutor_reply": "💪 Escribe qué tipo de tutor necesitas.",
-        "profile_text": "🧾 La sección 'Mi perfil' está en desarrollo.",
-        "premium_text": "💎 La sección Premium está en desarrollo.",
-        "complain_text": "⚠️ Escribe tu queja en un solo mensaje y el administrador la recibirá.",
-        "complaint_sent": "✅ Queja enviada al administrador.",
-        "send_file_now": "📎 Ahora puedes enviar tu archivo.",
-        "premium_profile_activated": "💎 Perfil premium activado.",
-    },
-    "fi": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Valitse toiminto 👇",
-        "task": "Suorita tehtävä🙏",
-        "tutor": "Tarvitsen opettajan💪",
-        "menu_btn": "📋 Valikko",
-        "profile": "👤 Oma profiili",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Valita",
-        "language": "🌍 Kieli",
-        "back": "⬅️ Takaisin",
-        "one": "Yksi tehtävä",
-        "complex": "Laaja työ",
-        "premium_profile": "Premium-profiili",
-        "premium_profile_info": "Koko kuukauden ajan saat rajattoman määrän tehtäviä mistä tahansa kouluaineesta",
-        "pay_premium_profile_btn": "Maksa premium-profiili (2500⭐)",
-        "choose_service": "👇 Valitse palvelu",
-        "pay_success_task": "✅ 200⭐ maksu onnistui.",
-        "pay_success_complex": "✅ 600⭐ maksu onnistui.",
-        "pay_success_premium_profile": "✅ 2500⭐ maksu premium-profiilista onnistui.",
-        "file_sent": "📩 Tiedosto lähetettiin ylläpitäjälle.",
-        "no_payment": "❌ Sinun täytyy maksaa ensin.",
-        "tutor_reply": "💪 Kirjoita, millaisen opettajan tarvitset.",
-        "profile_text": "🧾 Osio 'Oma profiili' on kehitteillä.",
-        "premium_text": "💎 Premium-osio on kehitteillä.",
-        "complain_text": "⚠️ Kirjoita valituksesi yhteen viestiin, niin ylläpitäjä saa sen.",
-        "complaint_sent": "✅ Valitus lähetettiin ylläpitäjälle.",
-        "send_file_now": "📎 Nyt voit lähettää tiedoston.",
-        "premium_profile_activated": "💎 Premium-profiili aktivoitu.",
-    },
+    "de": {},
+    "fr": {},
+    "it": {},
+    "es": {},
+    "fi": {},
 }
 
-for extra_lang in ["kk", "id", "ms", "km", "pl", "pt", "uz"]:
-    TEXTS[extra_lang] = dict(TEXTS["en"])
+# Fallback for additional languages
+for code in ["de", "fr", "it", "es", "fi", "kk", "id", "ms", "km", "pl", "pt", "uz"]:
+    if code not in TEXTS or not TEXTS[code]:
+        TEXTS[code] = dict(TEXTS["en"])
+
+
+def db():
+    return sqlite3.connect(DB_PATH)
+
+
+def init_db():
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            language TEXT DEFAULT 'ua',
+            manual_language INTEGER DEFAULT 0,
+            is_admin INTEGER DEFAULT 0,
+            premium_until TEXT,
+            pending_payment TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def ensure_user(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.execute("""
+            INSERT INTO users (user_id, language, manual_language, is_admin, premium_until, pending_payment)
+            VALUES (?, 'ua', 0, 0, NULL, NULL)
+        """, (user_id,))
+        conn.commit()
+    conn.close()
+
+
+def get_user(user_id: int):
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT user_id, language, manual_language, is_admin, premium_until, pending_payment
+        FROM users
+        WHERE user_id = ?
+    """, (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return {
+        "user_id": row[0],
+        "language": row[1],
+        "manual_language": bool(row[2]),
+        "is_admin": bool(row[3]),
+        "premium_until": row[4],
+        "pending_payment": row[5],
+    }
+
+
+def update_user_language(user_id: int, language: str, manual: bool):
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE users
+        SET language = ?, manual_language = ?
+        WHERE user_id = ?
+    """, (language, 1 if manual else 0, user_id))
+    conn.commit()
+    conn.close()
+
+
+def set_admin(user_id: int, is_admin: bool):
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_admin = ? WHERE user_id = ?", (1 if is_admin else 0, user_id))
+    conn.commit()
+    conn.close()
+
+
+def set_pending_payment(user_id: int, payment_type: str | None):
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET pending_payment = ? WHERE user_id = ?", (payment_type, user_id))
+    conn.commit()
+    conn.close()
+
+
+def get_pending_payment(user_id: int):
+    return get_user(user_id)["pending_payment"]
+
+
+def activate_premium(user_id: int, days: int = 30):
+    ensure_user(user_id)
+    premium_until = datetime.now(timezone.utc) + timedelta(days=days)
+    premium_until_str = premium_until.isoformat()
+
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE users
+        SET premium_until = ?, pending_payment = NULL
+        WHERE user_id = ?
+    """, (premium_until_str, user_id))
+    conn.commit()
+    conn.close()
+
+
+def clear_pending_payment(user_id: int):
+    set_pending_payment(user_id, None)
+
+
+def clear_premium_if_expired(user_id: int):
+    ensure_user(user_id)
+    user = get_user(user_id)
+    premium_until = user["premium_until"]
+
+    if not premium_until:
+        return
+
+    try:
+        dt = datetime.fromisoformat(premium_until)
+    except ValueError:
+        dt = None
+
+    if not dt or dt <= datetime.now(timezone.utc):
+        conn = db()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE users
+            SET premium_until = NULL
+            WHERE user_id = ?
+        """, (user_id,))
+        conn.commit()
+        conn.close()
+
+
+def is_premium(user_id: int):
+    clear_premium_if_expired(user_id)
+    user = get_user(user_id)
+    return user["premium_until"] is not None
+
+
+def premium_until_text(user_id: int):
+    clear_premium_if_expired(user_id)
+    user = get_user(user_id)
+    premium_until = user["premium_until"]
+    if not premium_until:
+        return None
+
+    dt = datetime.fromisoformat(premium_until)
+    return dt.strftime("%Y-%m-%d %H:%M UTC")
 
 
 def detect_user_language(language_code: str):
@@ -371,28 +422,50 @@ def detect_user_language(language_code: str):
 
 def resolve_user_language(message: types.Message):
     user_id = message.from_user.id
+    ensure_user(user_id)
+    user = get_user(user_id)
 
-    if user_lang_manual.get(user_id):
-        return user_lang.get(user_id, "ua")
+    if user["manual_language"]:
+        return user["language"] or "ua"
 
     detected_lang = detect_user_language(message.from_user.language_code)
     if detected_lang:
-        user_lang[user_id] = detected_lang
+        update_user_language(user_id, detected_lang, manual=False)
         return detected_lang
 
-    if user_id in user_lang:
-        return user_lang[user_id]
+    return user["language"] or "ua"
 
-    user_lang[user_id] = "ua"
-    return "ua"
+
+def build_profile_text(user_id: int, lang: str):
+    clear_premium_if_expired(user_id)
+    user = get_user(user_id)
+
+    role = TEXTS[lang]["profile_admin"] if user["is_admin"] or user_id == OWNER_ID else TEXTS[lang]["profile_user"]
+    status = TEXTS[lang]["profile_premium"] if is_premium(user_id) else TEXTS[lang]["profile_basic"]
+    language_name = LANG_NAMES.get(user["language"], user["language"])
+
+    lines = [
+        TEXTS[lang]["profile_title"],
+        "",
+        f"{TEXTS[lang]['profile_role']}: {role}",
+        f"{TEXTS[lang]['profile_language']}: {language_name}",
+        f"{TEXTS[lang]['profile_status']}: {status}",
+    ]
+
+    premium_until = premium_until_text(user_id)
+    if premium_until:
+        lines.append(f"{TEXTS[lang]['profile_until']}: {premium_until}")
+
+    return "\n".join(lines)
 
 
 async def set_bot_commands():
     commands = [
-        BotCommand("myprofile", "Моя анкета"),
+        BotCommand("myprofile", "My profile"),
         BotCommand("premium", "Premium"),
-        BotCommand("complaint", "Поскаржитися"),
-        BotCommand("language", "Мова"),
+        BotCommand("complaint", "Complaint"),
+        BotCommand("language", "Language"),
+        BotCommand("admin", "Admin login"),
     ]
     await bot.set_my_commands(commands)
 
@@ -431,12 +504,18 @@ def get_task_menu(lang: str):
     return kb
 
 
-def get_extra_menu(lang: str):
+def get_extra_menu(lang: str, user_id: int):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["profile"])
     kb.row(TEXTS[lang]["premium"])
     kb.row(TEXTS[lang]["complain"])
     kb.row(TEXTS[lang]["language"])
+
+    if get_user(user_id)["is_admin"] or user_id == OWNER_ID:
+        kb.row(TEXTS[lang]["logout_admin_btn"])
+    else:
+        kb.row(TEXTS[lang]["admin_login_btn"])
+
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -456,10 +535,11 @@ def get_premium_profile_menu(lang: str):
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
+    ensure_user(message.from_user.id)
     detected_lang = detect_user_language(message.from_user.language_code)
 
     if detected_lang:
-        user_lang[message.from_user.id] = detected_lang
+        update_user_language(message.from_user.id, detected_lang, manual=False)
         user_state[message.from_user.id] = "main"
         await message.answer(TEXTS[detected_lang]["home"], reply_markup=get_main_menu(detected_lang))
         return
@@ -472,14 +552,17 @@ async def start(message: types.Message):
 async def cmd_myprofile(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "profile_screen"
-    await message.answer(TEXTS[lang]["profile_text"], reply_markup=get_back_only_menu(lang))
+    await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=get_back_only_menu(lang))
 
 
 @dp.message_handler(commands=["premium"])
 async def cmd_premium(message: types.Message):
     lang = resolve_user_language(message)
-    user_state[message.from_user.id] = "premium_screen"
-    await message.answer(TEXTS[lang]["premium_text"], reply_markup=get_back_only_menu(lang))
+    user_state[message.from_user.id] = "premium_profile_screen"
+    await message.answer(
+        TEXTS[lang]["premium_profile_info"],
+        reply_markup=get_premium_profile_menu(lang)
+    )
 
 
 @dp.message_handler(commands=["complaint"])
@@ -491,13 +574,20 @@ async def cmd_complaint(message: types.Message):
 
 @dp.message_handler(commands=["language"])
 async def cmd_language(message: types.Message):
-    user_lang_manual.pop(message.from_user.id, None)
+    lang = resolve_user_language(message)
+    update_user_language(message.from_user.id, lang, manual=False)
     user_state[message.from_user.id] = "language_menu"
-    current_lang = resolve_user_language(message)
     await message.answer(
-        TEXTS[current_lang]["language_text"],
-        reply_markup=get_language_keyboard(include_back=True, lang=current_lang)
+        TEXTS[lang]["language_text"],
+        reply_markup=get_language_keyboard(include_back=True, lang=lang)
     )
+
+
+@dp.message_handler(commands=["admin"])
+async def cmd_admin(message: types.Message):
+    lang = resolve_user_language(message)
+    user_state[message.from_user.id] = "admin_login_wait"
+    await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=get_back_only_menu(lang))
 
 
 @dp.message_handler(lambda m: m.text in LANG_BUTTONS)
@@ -505,12 +595,12 @@ async def set_language(message: types.Message):
     lang = LANG_BUTTONS[message.text]
     previous_state = user_state.get(message.from_user.id, "start_language")
 
-    user_lang[message.from_user.id] = lang
+    update_user_language(message.from_user.id, lang, manual=True)
     user_lang_manual[message.from_user.id] = True
 
     if previous_state == "language_menu":
         user_state[message.from_user.id] = "extra_menu"
-        await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang))
+        await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang, message.from_user.id))
     else:
         user_state[message.from_user.id] = "main"
         await message.answer(TEXTS[lang]["home"], reply_markup=get_main_menu(lang))
@@ -527,7 +617,7 @@ async def successful_payment(message: types.Message):
     payload = message.successful_payment.invoice_payload
 
     if payload == "task_payment":
-        user_payment[message.from_user.id] = "task"
+        set_pending_payment(message.from_user.id, "task")
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_task']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -535,7 +625,7 @@ async def successful_payment(message: types.Message):
         )
 
     elif payload == "complex_payment":
-        user_payment[message.from_user.id] = "complex"
+        set_pending_payment(message.from_user.id, "complex")
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_complex']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -543,7 +633,7 @@ async def successful_payment(message: types.Message):
         )
 
     elif payload == "premium_profile_payment":
-        user_payment[message.from_user.id] = "premium_profile"
+        activate_premium(message.from_user.id, days=30)
         user_state[message.from_user.id] = "main"
         await message.answer(
             f"{TEXTS[lang]['pay_success_premium_profile']}\n\n{TEXTS[lang]['premium_profile_activated']}",
@@ -554,19 +644,14 @@ async def successful_payment(message: types.Message):
 @dp.message_handler(content_types=types.ContentType.DOCUMENT)
 async def handle_document(message: types.Message):
     lang = resolve_user_language(message)
+    pending_payment = get_pending_payment(message.from_user.id)
 
-    if message.from_user.id not in user_payment:
+    if pending_payment not in {"task", "complex"}:
         await message.answer(TEXTS[lang]["no_payment"])
         return
 
-    order_type = user_payment[message.from_user.id]
-
-    if order_type == "premium_profile":
-        await message.answer(TEXTS[lang]["premium_profile_activated"], reply_markup=get_main_menu(lang))
-        return
-
     caption_lines = [
-        f"📥 New order: {order_type}",
+        f"📥 New order: {pending_payment}",
         f"User ID: {message.from_user.id}"
     ]
 
@@ -583,7 +668,7 @@ async def handle_document(message: types.Message):
 
     await message.answer(TEXTS[lang]["file_sent"], reply_markup=get_main_menu(lang))
 
-    del user_payment[message.from_user.id]
+    clear_pending_payment(message.from_user.id)
     user_state[message.from_user.id] = "main"
 
 
@@ -597,7 +682,7 @@ async def menu(message: types.Message):
         if state in [
             "task_menu", "extra_menu", "tutor_screen", "profile_screen",
             "premium_screen", "complaint_wait", "awaiting_file",
-            "premium_profile_screen"
+            "premium_profile_screen", "admin_login_wait", "admin_password_wait"
         ]:
             user_state[message.from_user.id] = "main"
             await message.answer(TEXTS[lang]["home"], reply_markup=get_main_menu(lang))
@@ -605,10 +690,32 @@ async def menu(message: types.Message):
 
         if state == "language_menu":
             user_state[message.from_user.id] = "extra_menu"
-            await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang))
+            await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang, message.from_user.id))
             return
 
         await message.answer(TEXTS[lang]["home"], reply_markup=get_main_menu(lang))
+        return
+
+    if state == "admin_login_wait":
+        user_state[message.from_user.id] = "admin_password_wait"
+        user_state[f"admin_login_{message.from_user.id}"] = text
+        await message.answer(TEXTS[lang]["ask_admin_password"], reply_markup=get_back_only_menu(lang))
+        return
+
+    if state == "admin_password_wait":
+        login_value = user_state.get(f"admin_login_{message.from_user.id}")
+        password_value = text
+
+        if login_value == ADMIN_LOGIN and password_value == ADMIN_PASSWORD:
+            set_admin(message.from_user.id, True)
+            user_state[message.from_user.id] = "main"
+            await message.answer(TEXTS[lang]["admin_login_success"], reply_markup=get_main_menu(lang))
+        else:
+            set_admin(message.from_user.id, False)
+            user_state[message.from_user.id] = "main"
+            await message.answer(TEXTS[lang]["admin_login_fail"], reply_markup=get_main_menu(lang))
+
+        user_state.pop(f"admin_login_{message.from_user.id}", None)
         return
 
     if state == "complaint_wait":
@@ -636,7 +743,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["menu_btn"]:
         user_state[message.from_user.id] = "extra_menu"
-        await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang))
+        await message.answer(TEXTS[lang]["home"], reply_markup=get_extra_menu(lang, message.from_user.id))
         return
 
     if text == TEXTS[lang]["one"]:
@@ -691,12 +798,15 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["profile"]:
         user_state[message.from_user.id] = "profile_screen"
-        await message.answer(TEXTS[lang]["profile_text"], reply_markup=get_back_only_menu(lang))
+        await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=get_back_only_menu(lang))
         return
 
     if text == TEXTS[lang]["premium"]:
-        user_state[message.from_user.id] = "premium_screen"
-        await message.answer(TEXTS[lang]["premium_text"], reply_markup=get_back_only_menu(lang))
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(
+            TEXTS[lang]["premium_profile_info"],
+            reply_markup=get_premium_profile_menu(lang)
+        )
         return
 
     if text == TEXTS[lang]["complain"]:
@@ -705,19 +815,33 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["language"]:
-        user_lang_manual.pop(message.from_user.id, None)
-        user_state[message.from_user.id] = "language_menu"
         current_lang = resolve_user_language(message)
+        update_user_language(message.from_user.id, current_lang, manual=False)
+        user_state[message.from_user.id] = "language_menu"
         await message.answer(
             TEXTS[current_lang]["language_text"],
             reply_markup=get_language_keyboard(include_back=True, lang=current_lang)
         )
         return
 
+    if text == TEXTS[lang]["admin_login_btn"]:
+        user_state[message.from_user.id] = "admin_login_wait"
+        await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=get_back_only_menu(lang))
+        return
+
+    if text == TEXTS[lang]["logout_admin_btn"]:
+        set_admin(message.from_user.id, False)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["admin_logged_out"], reply_markup=get_main_menu(lang))
+        return
+
     await message.answer(TEXTS[lang]["home"], reply_markup=get_main_menu(lang))
 
 
 async def on_startup(_):
+    init_db()
+    ensure_user(OWNER_ID)
+    set_admin(OWNER_ID, True)
     await set_bot_commands()
 
 
