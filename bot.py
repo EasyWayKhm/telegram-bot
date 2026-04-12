@@ -37,6 +37,7 @@ def get_main_menu(lang: str):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]['task'])
     kb.row(TEXTS[lang]['tutor'])
+    kb.row(TEXTS[lang]['change_language'])
     return kb
 
 TEXTS = {
@@ -44,6 +45,7 @@ TEXTS = {
         'menu': 'Оберіть дію 👇',
         'task': 'Виконати завдання🙏',
         'tutor': 'Потрібен репетитор💪',
+        'change_language': 'Змінити мову🌍',
         'one': 'Одне завдання',
         'complex': 'Комплексне виконання роботи',
         'pay_success': '✅ Оплата пройшла! Надішли файл.',
@@ -54,6 +56,7 @@ TEXTS = {
         'menu': 'Choose an action 👇',
         'task': 'Do the task🙏',
         'tutor': 'Need a tutor💪',
+        'change_language': 'Change language🌍',
         'one': 'Single task',
         'complex': 'Complex work',
         'pay_success': '✅ Payment successful! Send your file.',
@@ -64,6 +67,7 @@ TEXTS = {
         'menu': 'Выберите действие 👇',
         'task': 'Выполнить задание🙏',
         'tutor': 'Нужен репетитор💪',
+        'change_language': 'Сменить язык🌍',
         'one': 'Одно задание',
         'complex': 'Комплексная работа',
         'pay_success': '✅ Оплата прошла! Отправьте файл.',
@@ -74,6 +78,7 @@ TEXTS = {
         'menu': 'Valitse toiminto 👇',
         'task': 'Suorita tehtävä🙏',
         'tutor': 'Tarvitsetko opettajan💪',
+        'change_language': 'Vaihda kieli🌍',
         'one': 'Yksi tehtävä',
         'complex': 'Laajempi työ',
         'pay_success': '✅ Maksu onnistui! Lähetä tiedosto.',
@@ -104,13 +109,21 @@ async def start(msg: types.Message):
         return
 
     text = (
-        "Вітаю з підпискою! 👋\n\n"
-        "Вибери мову бота\n"
-        "Congratulations on subscribing! 👋\n"
-        "Select the bot language\n"
-        "Поздравляем с подпиской! 👋\n"
-        "Выберите язык бота\n"
-        "Onnittelut tilauksestasi! 👋\n"
+        "Вітаю з підпискою! 👋
+
+"
+        "Вибери мову бота
+"
+        "Congratulations on subscribing! 👋
+"
+        "Select the bot language
+"
+        "Поздравляем с подпиской! 👋
+"
+        "Выберите язык бота
+"
+        "Onnittelut tilauksestasi! 👋
+"
         "Valitse botin kieli"
     )
 
@@ -138,10 +151,15 @@ async def menu(msg: types.Message):
         await start(msg)
         return
 
-    if msg.text == TEXTS[lang]['task']:
+    if msg.text == TEXTS[lang]['change_language']:
+        user_lang.pop(msg.from_user.id, None)
+        await start(msg)
+
+    elif msg.text == TEXTS[lang]['task']:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
         kb.row(TEXTS[lang]['one'])
         kb.row(TEXTS[lang]['complex'])
+        kb.row(TEXTS[lang]['change_language'])
         await msg.answer('👇', reply_markup=kb)
 
     elif msg.text == TEXTS[lang]['one']:
@@ -151,7 +169,7 @@ async def menu(msg: types.Message):
             description="Single task",
             payload="task_payment",
             currency="XTR",
-            prices=[LabeledPrice(label="Task", amount=100)],
+            prices=[LabeledPrice(label="Task", amount=200)],
             start_parameter="task"
         )
 
@@ -162,7 +180,7 @@ async def menu(msg: types.Message):
             description="Complex work",
             payload="complex_payment",
             currency="XTR",
-            prices=[LabeledPrice(label="Complex", amount=500)],
+            prices=[LabeledPrice(label="Complex", amount=600)],
             start_parameter="complex"
         )
 
