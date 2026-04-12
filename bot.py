@@ -3,8 +3,8 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
 from aiogram.utils import executor
 
-API_TOKEN = "8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368"
-OWNER_ID = 510644962
+API_TOKEN = "YOUR_BOT_TOKEN"
+OWNER_ID = 123456789
 
 logging.basicConfig(level=logging.INFO)
 
@@ -13,6 +13,31 @@ dp = Dispatcher(bot)
 
 user_lang = {}
 user_payment = {}
+
+
+def detect_user_language(telegram_language_code: str):
+    if not telegram_language_code:
+        return None
+
+    code = telegram_language_code.lower()
+
+    if code.startswith('uk'):
+        return 'ua'
+    if code.startswith('en'):
+        return 'en'
+    if code.startswith('ru'):
+        return 'ru'
+    if code.startswith('fi'):
+        return 'fi'
+
+    return None
+
+
+def get_main_menu(lang: str):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]['task'])
+    kb.row(TEXTS[lang]['tutor'])
+    return kb
 
 TEXTS = {
     'ua': {
@@ -71,6 +96,13 @@ LANG_MAP = {
 
 @dp.message_handler(commands=['start'])
 async def start(msg: types.Message):
+    detected_lang = detect_user_language(msg.from_user.language_code)
+
+    if detected_lang:
+        user_lang[msg.from_user.id] = detected_lang
+        await msg.answer(TEXTS[detected_lang]['menu'], reply_markup=get_main_menu(detected_lang))
+        return
+
     text = (
         "Вітаю з підпискою! 👋\n\n"
         "Вибери мову бота\n"
@@ -89,17 +121,20 @@ async def set_language(msg: types.Message):
     lang = LANG_MAP[msg.text]
     user_lang[msg.from_user.id] = lang
 
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]['task'])
-    kb.row(TEXTS[lang]['tutor'])
-
-    await msg.answer(TEXTS[lang]['menu'], reply_markup=kb)
+    await msg.answer(TEXTS[lang]['menu'], reply_markup=get_main_menu(lang))
 
 @dp.message_handler()
 async def menu(msg: types.Message):
     lang = user_lang.get(msg.from_user.id)
 
     if not lang:
+        detected_lang = detect_user_language(msg.from_user.language_code)
+        if detected_lang:
+            user_lang[msg.from_user.id] = detected_lang
+            lang = detected_lang
+            await msg.answer(TEXTS[lang]['menu'], reply_markup=get_main_menu(lang))
+            return
+
         await start(msg)
         return
 
