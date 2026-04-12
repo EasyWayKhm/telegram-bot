@@ -3,13 +3,7 @@ import os
 
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-    LabeledPrice,
-    BotCommand,
-)
-
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice, BotCommand
 from aiogram.utils import executor
 
 load_dotenv()
@@ -28,20 +22,24 @@ dp = Dispatcher(bot)
 user_lang = {}
 user_payment = {}
 user_state = {}
+user_lang_manual = {}
 
 LANG_BUTTONS = {
     "🇺🇦 Українська": "ua",
+    "🇷🇺 Русский": "ru",
     "🇬🇧 English": "en",
+    "🇩🇪 Deutsch": "de",
+    "🇫🇷 Français": "fr",
+    "🇮🇹 Italiano": "it",
+    "🇪🇸 Español": "es",
+    "🇫🇮 Suomi": "fi",
     "🇰🇿 Қазақ": "kk",
     "🇮🇩 Indonesia": "id",
     "🇲🇾 Malay": "ms",
-    "🇪🇸 Español": "es",
     "🇰🇭 ភាសាខ្មែរ": "km",
     "🇵🇱 Polski": "pl",
-    "🇮🇹 Italiano": "it",
     "🇵🇹🇧🇷 Portuguesa": "pt",
     "🇺🇿 Oʻzbekcha": "uz",
-    "🇷🇺 Русский": "ru",
 }
 
 TEXTS = {
@@ -64,8 +62,8 @@ TEXTS = {
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
         "choose_service": "👇 Обери послугу",
-        "pay_success_task": "✅ Оплата 200⭐ пройшла успішно. Надішли файл.",
-        "pay_success_complex": "✅ Оплата 600⭐ пройшла успішно. Надішли файл.",
+        "pay_success_task": "✅ Оплата 200⭐ пройшла успішно.",
+        "pay_success_complex": "✅ Оплата 600⭐ пройшла успішно.",
         "file_sent": "📩 Файл відправлено адміністратору.",
         "no_payment": "❌ Спочатку потрібно оплатити.",
         "tutor_reply": "💪 Напиши, який саме репетитор тобі потрібен.",
@@ -74,48 +72,6 @@ TEXTS = {
         "complain_text": "⚠️ Напиши свою скаргу одним повідомленням, і адміністратор її побачить.",
         "complaint_sent": "✅ Скаргу відправлено адміністратору.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
-        "commands": {
-            "myprofile": "Моя анкета",
-            "premium": "Premium",
-            "complaint": "Поскаржитися",
-            "language": "Мова",
-        },
-    },
-    "en": {
-        "language_text": (
-            "👋 Вибери мову бота\n"
-            "👋 Select the bot language\n"
-            "👋 Выберите язык бота\n"
-            "👋 Valitse botin kieli"
-        ),
-        "home": "Choose an action 👇",
-        "task": "Do the task🙏",
-        "tutor": "Need a tutor💪",
-        "menu_btn": "📋 Menu",
-        "profile": "👤 My profile",
-        "premium": "⭐ Premium",
-        "complain": "🚫 Complain",
-        "language": "🌍 Language",
-        "back": "⬅️ Back",
-        "one": "Single task",
-        "complex": "Complex work",
-        "choose_service": "👇 Choose a service",
-        "pay_success_task": "✅ Payment of 200⭐ was successful. Send your file.",
-        "pay_success_complex": "✅ Payment of 600⭐ was successful. Send your file.",
-        "file_sent": "📩 File sent to the administrator.",
-        "no_payment": "❌ You need to pay first.",
-        "tutor_reply": "💪 Write what kind of tutor you need.",
-        "profile_text": "🧾 The 'My profile' section is under development.",
-        "premium_text": "💎 The Premium section is under development.",
-        "complain_text": "⚠️ Send your complaint in one message, and the administrator will receive it.",
-        "complaint_sent": "✅ Complaint sent to the administrator.",
-        "send_file_now": "📎 Now you can send your file.",
-        "commands": {
-            "myprofile": "My profile",
-            "premium": "Premium",
-            "complaint": "Complain",
-            "language": "Language",
-        },
     },
     "ru": {
         "language_text": (
@@ -136,8 +92,8 @@ TEXTS = {
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
         "choose_service": "👇 Выберите услугу",
-        "pay_success_task": "✅ Оплата 200⭐ прошла успешно. Отправьте файл.",
-        "pay_success_complex": "✅ Оплата 600⭐ прошла успешно. Отправьте файл.",
+        "pay_success_task": "✅ Оплата 200⭐ прошла успешно.",
+        "pay_success_complex": "✅ Оплата 600⭐ прошла успешно.",
         "file_sent": "📩 Файл отправлен администратору.",
         "no_payment": "❌ Сначала нужно оплатить.",
         "tutor_reply": "💪 Напишите, какой именно репетитор вам нужен.",
@@ -146,16 +102,190 @@ TEXTS = {
         "complain_text": "⚠️ Напишите вашу жалобу одним сообщением, и администратор её увидит.",
         "complaint_sent": "✅ Жалоба отправлена администратору.",
         "send_file_now": "📎 Теперь можете отправить файл.",
-        "commands": {
-            "myprofile": "Моя анкета",
-            "premium": "Premium",
-            "complaint": "Пожаловаться",
-            "language": "Язык",
-        },
+    },
+    "en": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Choose an action 👇",
+        "task": "Do the task🙏",
+        "tutor": "Need a tutor💪",
+        "menu_btn": "📋 Menu",
+        "profile": "👤 My profile",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Complain",
+        "language": "🌍 Language",
+        "back": "⬅️ Back",
+        "one": "Single task",
+        "complex": "Complex work",
+        "choose_service": "👇 Choose a service",
+        "pay_success_task": "✅ Payment of 200⭐ was successful.",
+        "pay_success_complex": "✅ Payment of 600⭐ was successful.",
+        "file_sent": "📩 File sent to the administrator.",
+        "no_payment": "❌ You need to pay first.",
+        "tutor_reply": "💪 Write what kind of tutor you need.",
+        "profile_text": "🧾 The 'My profile' section is under development.",
+        "premium_text": "💎 The Premium section is under development.",
+        "complain_text": "⚠️ Send your complaint in one message, and the administrator will receive it.",
+        "complaint_sent": "✅ Complaint sent to the administrator.",
+        "send_file_now": "📎 Now you can send your file.",
+    },
+    "de": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Wähle eine Aktion 👇",
+        "task": "Aufgabe erledigen🙏",
+        "tutor": "Ich brauche einen Tutor💪",
+        "menu_btn": "📋 Menü",
+        "profile": "👤 Mein Profil",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Beschwerde einreichen",
+        "language": "🌍 Sprache",
+        "back": "⬅️ Zurück",
+        "one": "Eine Aufgabe",
+        "complex": "Komplexe Arbeit",
+        "choose_service": "👇 Wähle einen Service",
+        "pay_success_task": "✅ Zahlung von 200⭐ war erfolgreich.",
+        "pay_success_complex": "✅ Zahlung von 600⭐ war erfolgreich.",
+        "file_sent": "📩 Datei wurde an den Administrator gesendet.",
+        "no_payment": "❌ Bitte zuerst bezahlen.",
+        "tutor_reply": "💪 Schreibe, welchen Tutor du brauchst.",
+        "profile_text": "🧾 Der Bereich „Mein Profil“ ist in Entwicklung.",
+        "premium_text": "💎 Der Premium-Bereich ist in Entwicklung.",
+        "complain_text": "⚠️ Schreibe deine Beschwerde in einer Nachricht, und der Administrator erhält sie.",
+        "complaint_sent": "✅ Beschwerde wurde an den Administrator gesendet.",
+        "send_file_now": "📎 Jetzt kannst du deine Datei senden.",
+    },
+    "fr": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Choisissez une action 👇",
+        "task": "Faire le devoir🙏",
+        "tutor": "J’ai besoin d’un tuteur💪",
+        "menu_btn": "📋 Menu",
+        "profile": "👤 Mon profil",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Se plaindre",
+        "language": "🌍 Langue",
+        "back": "⬅️ Retour",
+        "one": "Un devoir",
+        "complex": "Travail complexe",
+        "choose_service": "👇 Choisissez un service",
+        "pay_success_task": "✅ Le paiement de 200⭐ a réussi.",
+        "pay_success_complex": "✅ Le paiement de 600⭐ a réussi.",
+        "file_sent": "📩 Fichier envoyé à l’administrateur.",
+        "no_payment": "❌ Vous devez payer d’abord.",
+        "tutor_reply": "💪 Écris quel type de tuteur tu veux.",
+        "profile_text": "🧾 La section « Mon profil » est en développement.",
+        "premium_text": "💎 La section Premium est en développement.",
+        "complain_text": "⚠️ Écris ta plainte dans un seul message, et l’administrateur la recevra.",
+        "complaint_sent": "✅ Plainte envoyée à l’administrateur.",
+        "send_file_now": "📎 Maintenant tu peux envoyer ton fichier.",
+    },
+    "it": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Scegli un’azione 👇",
+        "task": "Esegui il compito🙏",
+        "tutor": "Ho bisogno di un tutor💪",
+        "menu_btn": "📋 Menu",
+        "profile": "👤 Il mio profilo",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Reclamo",
+        "language": "🌍 Lingua",
+        "back": "⬅️ Indietro",
+        "one": "Un compito",
+        "complex": "Lavoro complesso",
+        "choose_service": "👇 Scegli un servizio",
+        "pay_success_task": "✅ Pagamento di 200⭐ riuscito.",
+        "pay_success_complex": "✅ Pagamento di 600⭐ riuscito.",
+        "file_sent": "📩 File inviato all’amministratore.",
+        "no_payment": "❌ Devi prima pagare.",
+        "tutor_reply": "💪 Scrivi di quale tutor hai bisogno.",
+        "profile_text": "🧾 La sezione 'Il mio profilo' è in sviluppo.",
+        "premium_text": "💎 La sezione Premium è in sviluppo.",
+        "complain_text": "⚠️ Scrivi il tuo reclamo in un solo messaggio e l’amministratore lo riceverà.",
+        "complaint_sent": "✅ Reclamo inviato all’amministratore.",
+        "send_file_now": "📎 Ora puoi inviare il file.",
+    },
+    "es": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Elige una acción 👇",
+        "task": "Hacer la tarea🙏",
+        "tutor": "Necesito un tutor💪",
+        "menu_btn": "📋 Menú",
+        "profile": "👤 Mi perfil",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Quejarse",
+        "language": "🌍 Idioma",
+        "back": "⬅️ Atrás",
+        "one": "Una tarea",
+        "complex": "Trabajo complejo",
+        "choose_service": "👇 Elige un servicio",
+        "pay_success_task": "✅ El pago de 200⭐ fue exitoso.",
+        "pay_success_complex": "✅ El pago de 600⭐ fue exitoso.",
+        "file_sent": "📩 Archivo enviado al administrador.",
+        "no_payment": "❌ Primero debes pagar.",
+        "tutor_reply": "💪 Escribe qué tipo de tutor necesitas.",
+        "profile_text": "🧾 La sección 'Mi perfil' está en desarrollo.",
+        "premium_text": "💎 La sección Premium está en desarrollo.",
+        "complain_text": "⚠️ Escribe tu queja en un solo mensaje y el administrador la recibirá.",
+        "complaint_sent": "✅ Queja enviada al administrador.",
+        "send_file_now": "📎 Ahora puedes enviar tu archivo.",
+    },
+    "fi": {
+        "language_text": (
+            "👋 Вибери мову бота\n"
+            "👋 Select the bot language\n"
+            "👋 Выберите язык бота\n"
+            "👋 Valitse botin kieli"
+        ),
+        "home": "Valitse toiminto 👇",
+        "task": "Suorita tehtävä🙏",
+        "tutor": "Tarvitsen opettajan💪",
+        "menu_btn": "📋 Valikko",
+        "profile": "👤 Oma profiili",
+        "premium": "⭐ Premium",
+        "complain": "🚫 Valita",
+        "language": "🌍 Kieli",
+        "back": "⬅️ Takaisin",
+        "one": "Yksi tehtävä",
+        "complex": "Laaja työ",
+        "choose_service": "👇 Valitse palvelu",
+        "pay_success_task": "✅ 200⭐ maksu onnistui.",
+        "pay_success_complex": "✅ 600⭐ maksu onnistui.",
+        "file_sent": "📩 Tiedosto lähetettiin ylläpitäjälle.",
+        "no_payment": "❌ Sinun täytyy maksaa ensin.",
+        "tutor_reply": "💪 Kirjoita, millaisen opettajan tarvitset.",
+        "profile_text": "🧾 Osio 'Oma profiili' on kehitteillä.",
+        "premium_text": "💎 Premium-osio on kehitteillä.",
+        "complain_text": "⚠️ Kirjoita valituksesi yhteen viestiin, niin ylläpitäjä saa sen.",
+        "complaint_sent": "✅ Valitus lähetettiin ylläpitäjälle.",
+        "send_file_now": "📎 Nyt voit lähettää tiedoston.",
     },
 }
 
-for extra_lang in ["kk", "id", "ms", "es", "km", "pl", "it", "pt", "uz"]:
+for extra_lang in ["kk", "id", "ms", "km", "pl", "pt", "uz"]:
     TEXTS[extra_lang] = dict(TEXTS["en"])
 
 
@@ -167,30 +297,54 @@ def detect_user_language(language_code: str):
 
     if code.startswith("uk"):
         return "ua"
-    if code.startswith("en"):
-        return "en"
     if code.startswith("ru"):
         return "ru"
+    if code.startswith("en"):
+        return "en"
+    if code.startswith("de"):
+        return "de"
+    if code.startswith("fr"):
+        return "fr"
+    if code.startswith("it"):
+        return "it"
+    if code.startswith("es"):
+        return "es"
+    if code.startswith("fi"):
+        return "fi"
     if code.startswith("kk"):
         return "kk"
     if code.startswith("id"):
         return "id"
     if code.startswith("ms"):
         return "ms"
-    if code.startswith("es"):
-        return "es"
     if code.startswith("km"):
         return "km"
     if code.startswith("pl"):
         return "pl"
-    if code.startswith("it"):
-        return "it"
     if code.startswith("pt"):
         return "pt"
     if code.startswith("uz"):
         return "uz"
 
     return None
+
+
+def resolve_user_language(message: types.Message):
+    user_id = message.from_user.id
+
+    if user_lang_manual.get(user_id):
+        return user_lang.get(user_id, "ua")
+
+    detected_lang = detect_user_language(message.from_user.language_code)
+    if detected_lang:
+        user_lang[user_id] = detected_lang
+        return detected_lang
+
+    if user_id in user_lang:
+        return user_lang[user_id]
+
+    user_lang[user_id] = "ua"
+    return "ua"
 
 
 async def set_bot_commands():
@@ -205,48 +359,50 @@ async def set_bot_commands():
 
 def get_language_keyboard(include_back=False, lang="ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton("🇺🇦 Українська"), KeyboardButton("🇬🇧 English"))
-    kb.row(KeyboardButton("🇰🇿 Қазақ"), KeyboardButton("🇮🇩 Indonesia"))
-    kb.row(KeyboardButton("🇲🇾 Malay"), KeyboardButton("🇪🇸 Español"))
-    kb.row(KeyboardButton("🇰🇭 ភាសាខ្មែរ"), KeyboardButton("🇵🇱 Polski"))
-    kb.row(KeyboardButton("🇮🇹 Italiano"), KeyboardButton("🇵🇹🇧🇷 Portuguesa"))
-    kb.row(KeyboardButton("🇺🇿 Oʻzbekcha"), KeyboardButton("🇷🇺 Русский"))
+    kb.row("🇺🇦 Українська", "🇷🇺 Русский")
+    kb.row("🇬🇧 English", "🇩🇪 Deutsch")
+    kb.row("🇫🇷 Français", "🇮🇹 Italiano")
+    kb.row("🇪🇸 Español", "🇫🇮 Suomi")
+    kb.row("🇰🇿 Қазақ", "🇮🇩 Indonesia")
+    kb.row("🇲🇾 Malay", "🇰🇭 ភាសាខ្មែរ")
+    kb.row("🇵🇱 Polski", "🇵🇹🇧🇷 Portuguesa")
+    kb.row("🇺🇿 Oʻzbekcha")
 
     if include_back:
-        kb.row(KeyboardButton(TEXTS[lang]["back"]))
+        kb.row(TEXTS[lang]["back"])
 
     return kb
 
 
 def get_main_menu(lang: str):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton(TEXTS[lang]["task"]))
-    kb.row(KeyboardButton(TEXTS[lang]["tutor"]))
-    kb.row(KeyboardButton(TEXTS[lang]["menu_btn"]))
+    kb.row(TEXTS[lang]["task"])
+    kb.row(TEXTS[lang]["tutor"])
+    kb.row(TEXTS[lang]["menu_btn"])
     return kb
 
 
 def get_task_menu(lang: str):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton(TEXTS[lang]["one"]))
-    kb.row(KeyboardButton(TEXTS[lang]["complex"]))
-    kb.row(KeyboardButton(TEXTS[lang]["back"]))
+    kb.row(TEXTS[lang]["one"])
+    kb.row(TEXTS[lang]["complex"])
+    kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def get_extra_menu(lang: str):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton(TEXTS[lang]["profile"]))
-    kb.row(KeyboardButton(TEXTS[lang]["premium"]))
-    kb.row(KeyboardButton(TEXTS[lang]["complain"]))
-    kb.row(KeyboardButton(TEXTS[lang]["language"]))
-    kb.row(KeyboardButton(TEXTS[lang]["back"]))
+    kb.row(TEXTS[lang]["profile"])
+    kb.row(TEXTS[lang]["premium"])
+    kb.row(TEXTS[lang]["complain"])
+    kb.row(TEXTS[lang]["language"])
+    kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def get_back_only_menu(lang: str):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton(TEXTS[lang]["back"]))
+    kb.row(TEXTS[lang]["back"])
     return kb
 
 
@@ -257,51 +413,43 @@ async def start(message: types.Message):
     if detected_lang:
         user_lang[message.from_user.id] = detected_lang
         user_state[message.from_user.id] = "main"
-        await message.answer(
-            TEXTS[detected_lang]["home"],
-            reply_markup=get_main_menu(detected_lang)
-        )
+        await message.answer(TEXTS[detected_lang]["home"], reply_markup=get_main_menu(detected_lang))
         return
 
     user_state[message.from_user.id] = "start_language"
-    await message.answer(
-        TEXTS["ua"]["language_text"],
-        reply_markup=get_language_keyboard()
-    )
+    await message.answer(TEXTS["ua"]["language_text"], reply_markup=get_language_keyboard())
 
 
 @dp.message_handler(commands=["myprofile"])
 async def cmd_myprofile(message: types.Message):
-    lang = user_lang.get(message.from_user.id, detect_user_language(message.from_user.language_code) or "ua")
-    user_lang[message.from_user.id] = lang
+    lang = resolve_user_language(message)
     user_state[message.from_user.id] = "profile_screen"
     await message.answer(TEXTS[lang]["profile_text"], reply_markup=get_back_only_menu(lang))
 
 
 @dp.message_handler(commands=["premium"])
 async def cmd_premium(message: types.Message):
-    lang = user_lang.get(message.from_user.id, detect_user_language(message.from_user.language_code) or "ua")
-    user_lang[message.from_user.id] = lang
+    lang = resolve_user_language(message)
     user_state[message.from_user.id] = "premium_screen"
     await message.answer(TEXTS[lang]["premium_text"], reply_markup=get_back_only_menu(lang))
 
 
 @dp.message_handler(commands=["complaint"])
 async def cmd_complaint(message: types.Message):
-    lang = user_lang.get(message.from_user.id, detect_user_language(message.from_user.language_code) or "ua")
-    user_lang[message.from_user.id] = lang
+    lang = resolve_user_language(message)
     user_state[message.from_user.id] = "complaint_wait"
     await message.answer(TEXTS[lang]["complain_text"], reply_markup=get_back_only_menu(lang))
 
 
 @dp.message_handler(commands=["language"])
 async def cmd_language(message: types.Message):
-    lang = user_lang.get(message.from_user.id, detect_user_language(message.from_user.language_code) or "ua")
-    user_lang[message.from_user.id] = lang
+    lang = resolve_user_language(message)
+    user_lang_manual.pop(message.from_user.id, None)
     user_state[message.from_user.id] = "language_menu"
+    current_lang = resolve_user_language(message)
     await message.answer(
-        TEXTS[lang]["language_text"],
-        reply_markup=get_language_keyboard(include_back=True, lang=lang)
+        TEXTS[current_lang]["language_text"],
+        reply_markup=get_language_keyboard(include_back=True, lang=current_lang)
     )
 
 
@@ -311,6 +459,7 @@ async def set_language(message: types.Message):
     previous_state = user_state.get(message.from_user.id, "start_language")
 
     user_lang[message.from_user.id] = lang
+    user_lang_manual[message.from_user.id] = True
 
     if previous_state == "language_menu":
         user_state[message.from_user.id] = "extra_menu"
@@ -327,7 +476,7 @@ async def pre_checkout(pre_checkout_q: types.PreCheckoutQuery):
 
 @dp.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment(message: types.Message):
-    lang = user_lang.get(message.from_user.id, "ua")
+    lang = resolve_user_language(message)
     payload = message.successful_payment.invoice_payload
 
     if payload == "task_payment":
@@ -349,7 +498,7 @@ async def successful_payment(message: types.Message):
 
 @dp.message_handler(content_types=types.ContentType.DOCUMENT)
 async def handle_document(message: types.Message):
-    lang = user_lang.get(message.from_user.id, "ua")
+    lang = resolve_user_language(message)
 
     if message.from_user.id not in user_payment:
         await message.answer(TEXTS[lang]["no_payment"])
@@ -381,22 +530,8 @@ async def handle_document(message: types.Message):
 
 @dp.message_handler(content_types=types.ContentType.TEXT)
 async def menu(message: types.Message):
-    lang = user_lang.get(message.from_user.id)
+    lang = resolve_user_language(message)
     state = user_state.get(message.from_user.id, "main")
-
-    if not lang:
-        detected_lang = detect_user_language(message.from_user.language_code)
-
-        if detected_lang:
-            user_lang[message.from_user.id] = detected_lang
-            user_state[message.from_user.id] = "main"
-            await message.answer(TEXTS[detected_lang]["home"], reply_markup=get_main_menu(detected_lang))
-            return
-
-        user_state[message.from_user.id] = "start_language"
-        await message.answer(TEXTS["ua"]["language_text"], reply_markup=get_language_keyboard())
-        return
-
     text = message.text
 
     if text == TEXTS[lang]["back"]:
@@ -485,10 +620,12 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["language"]:
+        user_lang_manual.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "language_menu"
+        current_lang = resolve_user_language(message)
         await message.answer(
-            TEXTS[lang]["language_text"],
-            reply_markup=get_language_keyboard(include_back=True, lang=lang)
+            TEXTS[current_lang]["language_text"],
+            reply_markup=get_language_keyboard(include_back=True, lang=current_lang)
         )
         return
 
