@@ -4,21 +4,19 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, LabeledPrice
 from aiogram.utils import executor
 
 API_TOKEN = "8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368"
-OWNER_ID = 510644962  # your Telegram ID
+OWNER_ID = 510644962
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# Store user language and payment status
 user_lang = {}
-user_payment = {}  # user_id: 'task' or 'complex'
+user_payment = {}
 
-# Texts for all languages
 TEXTS = {
     'ua': {
-        'start': 'Вітаю з підпискою! 👋\n\nВибери мову бота',
+        'menu': 'Оберіть дію 👇',
         'task': 'Виконати завдання🙏',
         'tutor': 'Потрібен репетитор💪',
         'one': 'Одне завдання',
@@ -28,7 +26,7 @@ TEXTS = {
         'no_payment': '❌ Спочатку потрібно оплатити!'
     },
     'en': {
-        'start': 'Congratulations on subscribing! 👋\n\nSelect the bot language',
+        'menu': 'Choose an action 👇',
         'task': 'Do the task🙏',
         'tutor': 'Need a tutor💪',
         'one': 'Single task',
@@ -38,7 +36,7 @@ TEXTS = {
         'no_payment': '❌ You must pay first!'
     },
     'ru': {
-        'start': 'Поздравляем с подпиской! 👋\n\nВыберите язык бота',
+        'menu': 'Выберите действие 👇',
         'task': 'Выполнить задание🙏',
         'tutor': 'Нужен репетитор💪',
         'one': 'Одно задание',
@@ -48,7 +46,7 @@ TEXTS = {
         'no_payment': '❌ Сначала нужно оплатить!'
     },
     'fi': {
-        'start': 'Onnittelut tilauksestasi! 👋\n\nValitse botin kieli',
+        'menu': 'Valitse toiminto 👇',
         'task': 'Suorita tehtävä🙏',
         'tutor': 'Tarvitsetko opettajan💪',
         'one': 'Yksi tehtävä',
@@ -59,10 +57,10 @@ TEXTS = {
     }
 }
 
-# Language keyboard
-lang_kb = ReplyKeyboardMarkup(resize_keyboard=True)
-lang_kb.add(KeyboardButton('Українська'), KeyboardButton('English'))
-lang_kb.add(KeyboardButton('Русский'), KeyboardButton('Suomi'))
+# FIXED keyboard
+lang_kb = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+lang_kb.row(KeyboardButton('Українська'), KeyboardButton('English'))
+lang_kb.row(KeyboardButton('Русский'), KeyboardButton('Suomi'))
 
 LANG_MAP = {
     'Українська': 'ua',
@@ -73,15 +71,17 @@ LANG_MAP = {
 
 @dp.message_handler(commands=['start'])
 async def start(msg: types.Message):
-    text = """Вітаю з підпискою! 👋 
+    text = (
+        "Вітаю з підпискою! 👋\n\n"
+        "Вибери мову бота\n"
+        "Congratulations on subscribing! 👋\n"
+        "Select the bot language\n"
+        "Поздравляем с подпиской! 👋\n"
+        "Выберите язык бота\n"
+        "Onnittelut tilauksestasi! 👋\n"
+        "Valitse botin kieli"
+    )
 
-Вибери мову бота
-Congratulations on subscribing! 👋
-Select the bot language
-Поздравляем с подпиской! 👋
-Выберите язык бота
-Onnittelut tilauksestasi! 👋
-Valitse botin kieli"""
     await msg.answer(text, reply_markup=lang_kb)
 
 @dp.message_handler(lambda m: m.text in LANG_MAP)
@@ -90,17 +90,23 @@ async def set_language(msg: types.Message):
     user_lang[msg.from_user.id] = lang
 
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.add(TEXTS[lang]['task'], TEXTS[lang]['tutor'])
+    kb.row(TEXTS[lang]['task'])
+    kb.row(TEXTS[lang]['tutor'])
 
-    await msg.answer(TEXTS[lang]['start'], reply_markup=kb)
+    await msg.answer(TEXTS[lang]['menu'], reply_markup=kb)
 
 @dp.message_handler()
 async def menu(msg: types.Message):
-    lang = user_lang.get(msg.from_user.id, 'ua')
+    lang = user_lang.get(msg.from_user.id)
+
+    if not lang:
+        await start(msg)
+        return
 
     if msg.text == TEXTS[lang]['task']:
         kb = ReplyKeyboardMarkup(resize_keyboard=True)
-        kb.add(TEXTS[lang]['one'], TEXTS[lang]['complex'])
+        kb.row(TEXTS[lang]['one'])
+        kb.row(TEXTS[lang]['complex'])
         await msg.answer('👇', reply_markup=kb)
 
     elif msg.text == TEXTS[lang]['one']:
@@ -125,12 +131,10 @@ async def menu(msg: types.Message):
             start_parameter="complex"
         )
 
-# Pre-checkout
 @dp.pre_checkout_query_handler(lambda query: True)
 async def pre_checkout(pre_checkout_q: types.PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
 
-# Successful payment
 @dp.message_handler(content_types=types.ContentType.SUCCESSFUL_PAYMENT)
 async def got_payment(msg: types.Message):
     lang = user_lang.get(msg.from_user.id, 'ua')
@@ -144,7 +148,6 @@ async def got_payment(msg: types.Message):
 
     await msg.answer(TEXTS[lang]['pay_success'])
 
-# File handler with payment check
 @dp.message_handler(content_types=types.ContentType.DOCUMENT)
 async def handle_file(msg: types.Message):
     lang = user_lang.get(msg.from_user.id, 'ua')
@@ -161,7 +164,6 @@ async def handle_file(msg: types.Message):
 
     await msg.answer(TEXTS[lang]['file_sent'])
 
-    # Reset payment after file sent
     del user_payment[msg.from_user.id]
 
 if __name__ == '__main__':
