@@ -146,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Мої заявки",
+        "tutor_my_requests_btn": "📂 Заявки в роботі",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -304,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Мои заявки",
+        "tutor_my_requests_btn": "📂 Заявки в работе",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -2004,7 +2004,7 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
-    if text == TEXTS[lang]["my_requests_btn"]:
+    if text == TEXTS[lang]["my_requests_btn"] and not is_tutor_user(message.from_user.id):
         user_temp.pop(message.from_user.id, None)
         requests = get_user_requests(message.from_user.id)
         if not requests:
