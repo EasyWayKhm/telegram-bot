@@ -166,7 +166,8 @@ TEXTS = {
         "tutor_withdraw_btn": "💸 Виведення коштів",
         "tutor_enter_card": "Введи номер картки для виведення коштів:",
         "tutor_withdraw_sent": "✅ Запит на виведення коштів відправлено адміністратору.",
-        "tutor_withdraw_not_available": "❌ Виведення доступне від 1000⭐.",
+        "tutor_withdraw_not_available": "❌ Виведення можливе лише коли баланс досягне 1000⭐.",
+        "tutor_withdraw_balance_info": "💰 Поточний баланс: {balance}⭐",
         "tutor_withdraw_request_title": "💸 Tutor хоче вивести кошти",
         "card_number_label": "Номер картки",
 
@@ -310,7 +311,7 @@ TEXTS = {
         "tutor_send_file_btn": "📎 Отправить файл пользователю",
         "tutor_reply_text_prompt": "Введи сообщение для пользователя:",
         "tutor_reply_text_sent": "✅ Сообщение пользователю отправлено.",
-        "tutor_send_file_prompt": "Отправь файл пользователю одним сообщением.",
+        "tutor_send_file_prompt": "Отправь файл для пользователя одним сообщением.",
         "tutor_send_file_sent": "✅ Файл пользователю отправлен.",
         "request_files_title": "📎 Файлы по заявке",
         "no_request_files": "Файлов по этой заявке пока нет.",
@@ -321,7 +322,8 @@ TEXTS = {
         "tutor_withdraw_btn": "💸 Вывод средств",
         "tutor_enter_card": "Введи номер карты для вывода средств:",
         "tutor_withdraw_sent": "✅ Запрос на вывод средств отправлен администратору.",
-        "tutor_withdraw_not_available": "❌ Вывод доступен от 1000⭐.",
+        "tutor_withdraw_not_available": "❌ Вывод возможен только когда баланс достигнет 1000⭐.",
+        "tutor_withdraw_balance_info": "💰 Текущий баланс: {balance}⭐",
         "tutor_withdraw_request_title": "💸 Tutor хочет вывести средства",
         "card_number_label": "Номер карты",
 
@@ -806,7 +808,6 @@ def add_tutor_balance(tutor_user_id: int, amount_stars: int, request_id: int | N
     conn.commit()
     conn.close()
 
-
 def add_payment(user_id: int, payment_type: str, amount: int):
     conn = db()
     cur = conn.cursor()
@@ -885,6 +886,7 @@ def activate_premium(user_id: int, days: int = 30):
 
 def clear_pending_payment(user_id: int):
     set_pending_payment(user_id, None)
+
 
 def clear_premium_if_expired(user_id: int):
     user = get_user(user_id)
@@ -1348,6 +1350,14 @@ def build_profile_text(user_id: int, lang: str):
     return "\n".join(lines)
 
 
+def build_tutor_panel_text(user_id: int, lang: str):
+    balance = get_tutor_balance(user_id)
+    return (
+        f"{TEXTS[lang]['tutor_panel_title']}\n"
+        f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐"
+    )
+
+
 def build_request_detail_text(request_data: dict, lang: str):
     payment_part = "-"
     if request_data.get("payment_amount_stars", 0) > 0:
@@ -1440,10 +1450,7 @@ def tutor_menu(user_id: int, lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["tutor_new_requests_btn"])
     kb.row(TEXTS[lang]["tutor_my_requests_btn"])
-
-    if get_tutor_balance(user_id) >= 1000:
-        kb.row(TEXTS[lang]["tutor_withdraw_btn"])
-
+    kb.row(TEXTS[lang]["tutor_withdraw_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1497,7 +1504,6 @@ def get_tutor_subjects_menu(category: str, lang: str = "ua"):
     kb.row(TEXTS[lang]["back"])
     return kb
 
-
 def get_request_confirm_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"])
@@ -1538,6 +1544,7 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
     ))
     return kb
 
+
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
 async def take_request_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -1562,7 +1569,10 @@ async def take_request_callback(callback_query: types.CallbackQuery):
 
     await callback_query.answer(TEXTS[lang]["tutor_take_success"])
     await callback_query.message.edit_reply_markup(reply_markup=None)
-    await callback_query.message.answer(TEXTS[lang]["tutor_take_success"], reply_markup=tutor_menu(user_id, lang))
+    await callback_query.message.answer(
+        f"{TEXTS[lang]['tutor_take_success']}\n\n{build_tutor_panel_text(user_id, lang)}",
+        reply_markup=tutor_menu(user_id, lang)
+    )
 
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("open_tutor_request:"))
@@ -1792,7 +1802,10 @@ async def handle_document(message: types.Message):
                 file_id=message.document.file_id,
                 file_name=message.document.file_name
             )
-            await message.answer(TEXTS[lang]["tutor_send_file_sent"], reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(
+                f"{TEXTS[lang]['tutor_send_file_sent']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                reply_markup=tutor_menu(message.from_user.id, lang)
+            )
         except Exception as e:
             await message.answer(f"❌ {e}", reply_markup=tutor_menu(message.from_user.id, lang))
 
@@ -1892,7 +1905,10 @@ async def menu(message: types.Message):
         register_tutor_profile(message.from_user.id, text.strip(), phone)
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "tutor_panel"
-        await message.answer(TEXTS[lang]["tutor_register_success"], reply_markup=tutor_menu(message.from_user.id, lang))
+        await message.answer(
+            f"{TEXTS[lang]['tutor_register_success']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+            reply_markup=tutor_menu(message.from_user.id, lang)
+        )
         return
 
     if state == "tutor_reply_text_wait":
@@ -1908,7 +1924,10 @@ async def menu(message: types.Message):
 
         try:
             await bot.send_message(reply_user_id, f"💬 Tutor:\n\n{text}")
-            await message.answer(TEXTS[lang]["tutor_reply_text_sent"], reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(
+                f"{TEXTS[lang]['tutor_reply_text_sent']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                reply_markup=tutor_menu(message.from_user.id, lang)
+            )
         except Exception as e:
             await message.answer(f"❌ {e}", reply_markup=tutor_menu(message.from_user.id, lang))
 
@@ -1946,7 +1965,10 @@ async def menu(message: types.Message):
                 logging.warning(f"Failed to send tutor withdraw request to admin {admin_id}: {e}")
 
         user_state[message.from_user.id] = "tutor_panel"
-        await message.answer(TEXTS[lang]["tutor_withdraw_sent"], reply_markup=tutor_menu(message.from_user.id, lang))
+        await message.answer(
+            f"{TEXTS[lang]['tutor_withdraw_sent']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+            reply_markup=tutor_menu(message.from_user.id, lang)
+        )
         return
 
     if state == "complaint_wait":
@@ -1976,6 +1998,7 @@ async def menu(message: types.Message):
 
         lines.append("")
         lines.append(f"{TEXTS[lang]['complaint_text_label']}:")
+
         lines.append(text)
 
         complaint_text = "\n".join(lines)
@@ -2293,7 +2316,10 @@ async def menu(message: types.Message):
 
         if login_tutor_by_phone(message.from_user.id, user_phone):
             user_state[message.from_user.id] = "tutor_panel"
-            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(
+                f"{TEXTS[lang]['tutor_auth_success']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                reply_markup=tutor_menu(message.from_user.id, lang)
+            )
         else:
             user_temp.setdefault(message.from_user.id, {})
             user_temp[message.from_user.id]["tutor_phone"] = user_phone
@@ -2307,7 +2333,10 @@ async def menu(message: types.Message):
             return
 
         user_state[message.from_user.id] = "tutor_panel"
-        await message.answer(TEXTS[lang]["tutor_panel_title"], reply_markup=tutor_menu(message.from_user.id, lang))
+        await message.answer(
+            build_tutor_panel_text(message.from_user.id, lang),
+            reply_markup=tutor_menu(message.from_user.id, lang)
+        )
         return
 
     if text == TEXTS[lang]["tutor_logout_btn"]:
@@ -2322,12 +2351,21 @@ async def menu(message: types.Message):
             return
 
         balance = get_tutor_balance(message.from_user.id)
+
         if balance < 1000:
-            await message.answer(TEXTS[lang]["tutor_withdraw_not_available"], reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(
+                f"{TEXTS[lang]['tutor_withdraw_balance_info'].format(balance=balance)}\n"
+                f"{TEXTS[lang]['tutor_withdraw_not_available']}",
+                reply_markup=tutor_menu(message.from_user.id, lang)
+            )
             return
 
         user_state[message.from_user.id] = "tutor_withdraw_card_wait"
-        await message.answer(TEXTS[lang]["tutor_enter_card"], reply_markup=back_menu(lang))
+        await message.answer(
+            f"{TEXTS[lang]['tutor_withdraw_balance_info'].format(balance=balance)}\n"
+            f"{TEXTS[lang]['tutor_enter_card']}",
+            reply_markup=back_menu(lang)
+        )
         return
 
     if text == TEXTS[lang]["admin_login_btn"]:
