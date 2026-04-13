@@ -15,10 +15,12 @@ from aiogram.utils import executor
 
 load_dotenv()
 
-API_TOKEN = "8311783439:AAFN3ldS9NXPZZ8zhvf2XFViYxVx6aKL368"
-OWNER_ID = 510644962
-
+API_TOKEN = os.getenv("API_TOKEN")
+OWNER_ID = int(os.getenv("OWNER_ID", "510644962"))
 DB_PATH = os.getenv("DB_PATH", "bot.db")
+
+if not API_TOKEN:
+    raise ValueError("API_TOKEN not found")
 
 logging.basicConfig(level=logging.INFO)
 
