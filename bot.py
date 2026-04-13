@@ -58,6 +58,9 @@ TEXTS = {
     "ua": {
         "language_text": "👋 Вибери мову бота",
         "main_menu_hint": "👋 Обери дію",
+        "start_phone_request": "📱 Для початку користування ботом поділись своїм номером телефону Telegram.",
+        "start_phone_saved": "✅ Номер телефону збережено.",
+
         "task": "Виконати завдання🙏",
         "tutor": "Потрібен репетитор💪",
         "my_requests_btn": "📂 Мої заявки",
@@ -135,9 +138,8 @@ TEXTS = {
         "admin_reply_text_prompt": "Введи текст відповіді для користувача:",
         "admin_reply_sent": "✅ Повідомлення користувачу відправлено.",
 
-        "tutor_auth_text": "🎓 Для входу Tutor поділись номером телефону або надішли його текстом.",
-        "tutor_enter_name": "Введи своє ім'я для Tutor-профілю:",
         "tutor_auth_success": "✅ Вхід Tutor успішний.",
+        "tutor_enter_name": "Введи своє ім'я для Tutor-профілю:",
         "tutor_register_success": "✅ Tutor-профіль створено. Вхід виконано.",
         "tutor_panel_title": "📚 Tutor-панель",
         "tutor_new_requests_btn": "🆕 Нові заявки",
@@ -183,7 +185,6 @@ TEXTS = {
         "categories_title": "📚 Обери категорію предмета:",
         "tutor_subject_title": "Вибери предмет з якого тобі потрібен репетитор:",
         "enter_name": "Введи своє ім'я:",
-        "enter_phone": "Введи свій номер телефону для зв'язку:",
         "ask_level": "Вкажи свій рівень або клас:",
         "ask_goal": "Напиши коротко свою ціль або проблему:",
         "ask_time": "Напиши зручний час для занять:",
@@ -212,6 +213,9 @@ TEXTS = {
     "ru": {
         "language_text": "👋 Выберите язык бота",
         "main_menu_hint": "👋 Выберите действие",
+        "start_phone_request": "📱 Для начала пользования ботом поделись своим номером телефона Telegram.",
+        "start_phone_saved": "✅ Номер телефона сохранён.",
+
         "task": "Выполнить задание🙏",
         "tutor": "Нужен репетитор💪",
         "my_requests_btn": "📂 Мои заявки",
@@ -289,9 +293,8 @@ TEXTS = {
         "admin_reply_text_prompt": "Введите текст ответа для пользователя:",
         "admin_reply_sent": "✅ Сообщение пользователю отправлено.",
 
-        "tutor_auth_text": "🎓 Для входа Tutor поделись номером телефона или отправь его текстом.",
-        "tutor_enter_name": "Введи своё имя для Tutor-профиля:",
         "tutor_auth_success": "✅ Вход Tutor успешный.",
+        "tutor_enter_name": "Введи своё имя для Tutor-профиля:",
         "tutor_register_success": "✅ Tutor-профиль создан. Вход выполнен.",
         "tutor_panel_title": "📚 Tutor-панель",
         "tutor_new_requests_btn": "🆕 Новые заявки",
@@ -337,7 +340,6 @@ TEXTS = {
         "categories_title": "📚 Выбери категорию предмета:",
         "tutor_subject_title": "Выбери предмет, по которому тебе нужен репетитор:",
         "enter_name": "Введи своё имя:",
-        "enter_phone": "Введи свой номер телефона для связи:",
         "ask_level": "Укажи свой уровень или класс:",
         "ask_goal": "Напиши кратко свою цель или проблему:",
         "ask_time": "Напиши удобное время для занятий:",
@@ -397,6 +399,7 @@ def init_db():
             manual_language INTEGER DEFAULT 0,
             is_admin INTEGER DEFAULT 0,
             is_tutor INTEGER DEFAULT 0,
+            phone TEXT,
             premium_until TEXT,
             pending_payment TEXT,
             premium_remind_3days_sent INTEGER DEFAULT 0,
@@ -486,6 +489,9 @@ def init_db():
     if not column_exists(cur, "users", "is_tutor"):
         cur.execute("ALTER TABLE users ADD COLUMN is_tutor INTEGER DEFAULT 0")
 
+    if not column_exists(cur, "users", "phone"):
+        cur.execute("ALTER TABLE users ADD COLUMN phone TEXT")
+
     if not column_exists(cur, "tutor_requests", "assigned_tutor_id"):
         cur.execute("ALTER TABLE tutor_requests ADD COLUMN assigned_tutor_id INTEGER")
 
@@ -515,10 +521,10 @@ def ensure_user(user_id: int):
         cur.execute("""
             INSERT INTO users (
                 user_id, language, manual_language, is_admin, is_tutor,
-                premium_until, pending_payment,
+                phone, premium_until, pending_payment,
                 premium_remind_3days_sent, premium_expired_sent
             )
-            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, 0, 0)
+            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, NULL, 0, 0)
         """, (user_id,))
         conn.commit()
 
@@ -531,7 +537,7 @@ def get_user(user_id: int):
     cur = conn.cursor()
     cur.execute("""
         SELECT user_id, language, manual_language, is_admin, is_tutor,
-               premium_until, pending_payment,
+               phone, premium_until, pending_payment,
                premium_remind_3days_sent, premium_expired_sent
         FROM users
         WHERE user_id = ?
@@ -545,10 +551,11 @@ def get_user(user_id: int):
         "manual_language": bool(row[2]),
         "is_admin": bool(row[3]),
         "is_tutor": bool(row[4]),
-        "premium_until": row[5],
-        "pending_payment": row[6],
-        "premium_remind_3days_sent": bool(row[7]),
-        "premium_expired_sent": bool(row[8]),
+        "phone": row[5],
+        "premium_until": row[6],
+        "pending_payment": row[7],
+        "premium_remind_3days_sent": bool(row[8]),
+        "premium_expired_sent": bool(row[9]),
     }
 
 
@@ -570,6 +577,20 @@ def set_user_language(user_id: int, language: str, manual: bool = False):
         SET language = ?, manual_language = ?
         WHERE user_id = ?
     """, (language, 1 if manual else 0, user_id))
+    conn.commit()
+    conn.close()
+
+
+def set_user_phone(user_id: int, phone: str):
+    ensure_user(user_id)
+    normalized = normalize_phone(phone)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE users
+        SET phone = ?
+        WHERE user_id = ?
+    """, (normalized, user_id))
     conn.commit()
     conn.close()
 
@@ -1292,10 +1313,12 @@ def build_profile_text(user_id: int, lang: str):
         f"{TEXTS[lang]['profile_status']}: {status}",
     ]
 
+    if user.get("phone"):
+        lines.append(f"{TEXTS[lang]['tutor_phone']}: {user['phone']}")
+
     tutor_profile = get_tutor_profile(user_id)
     if tutor_profile:
         lines.append(f"{TEXTS[lang]['tutor_name']}: {tutor_profile['full_name']}")
-        lines.append(f"{TEXTS[lang]['tutor_phone']}: {tutor_profile['phone']}")
         lines.append(f"{TEXTS[lang]['tutor_balance_label']}: {get_tutor_balance(user_id)}⭐")
 
     premium_until = premium_until_text(user_id)
@@ -1358,6 +1381,12 @@ def main_menu(lang: str = "ua"):
 def back_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def get_start_phone_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
     return kb
 
 
@@ -1469,23 +1498,9 @@ def get_tutor_subjects_menu(category: str, lang: str = "ua"):
     return kb
 
 
-def get_phone_menu(lang: str = "ua"):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
-    kb.row(TEXTS[lang]["back"])
-    return kb
-
-
 def get_request_confirm_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"])
-    kb.row(TEXTS[lang]["back"])
-    return kb
-
-
-def get_tutor_auth_menu(lang: str = "ua"):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1522,7 +1537,6 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
         callback_data=f"tutor_file_user:{request_id}"
     ))
     return kb
-
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
 async def take_request_callback(callback_query: types.CallbackQuery):
@@ -1640,6 +1654,13 @@ async def tutor_file_user_callback(callback_query: types.CallbackQuery):
 async def start(message: types.Message):
     ensure_user(message.from_user.id)
     lang = resolve_user_language(message)
+    user = get_user(message.from_user.id)
+
+    if not user.get("phone"):
+        user_state[message.from_user.id] = "start_phone_wait"
+        await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+        return
+
     user_state[message.from_user.id] = "main"
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
@@ -1861,22 +1882,6 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         return
 
-    if state == "tutor_auth_wait":
-        normalized = normalize_phone(text)
-        if not normalized:
-            await message.answer(TEXTS[lang]["phone_invalid"], reply_markup=get_tutor_auth_menu(lang))
-            return
-
-        if login_tutor_by_phone(message.from_user.id, normalized):
-            user_state[message.from_user.id] = "tutor_panel"
-            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(message.from_user.id, lang))
-        else:
-            user_temp.setdefault(message.from_user.id, {})
-            user_temp[message.from_user.id]["tutor_phone"] = normalized
-            user_state[message.from_user.id] = "tutor_register_name_wait"
-            await message.answer(TEXTS[lang]["tutor_enter_name"], reply_markup=back_menu(lang))
-        return
-
     if state == "tutor_register_name_wait":
         phone = user_temp.get(message.from_user.id, {}).get("tutor_phone")
         if not phone:
@@ -2018,18 +2023,6 @@ async def menu(message: types.Message):
     if state == "tutor_name_wait":
         user_temp.setdefault(message.from_user.id, {})
         user_temp[message.from_user.id]["name"] = text.strip()
-        user_state[message.from_user.id] = "tutor_phone_wait"
-        await message.answer(TEXTS[lang]["enter_phone"], reply_markup=get_phone_menu(lang))
-        return
-
-    if state == "tutor_phone_wait":
-        phone = normalize_phone(text)
-        if len(phone) < 6:
-            await message.answer(TEXTS[lang]["phone_invalid"], reply_markup=get_phone_menu(lang))
-            return
-
-        user_temp.setdefault(message.from_user.id, {})
-        user_temp[message.from_user.id]["phone"] = phone
         user_state[message.from_user.id] = "tutor_level_wait"
         await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
         return
@@ -2061,12 +2054,14 @@ async def menu(message: types.Message):
         user_state[message.from_user.id] = "tutor_confirm_wait"
 
         d = user_temp[message.from_user.id]
+        user_profile = get_user(message.from_user.id)
+
         confirm_text = (
             f"{TEXTS[lang]['request_confirm_text']}\n\n"
             f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
             f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}\n"
-            f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}\n"
+            f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}\n"
             f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}\n"
             f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}\n"
             f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}\n"
@@ -2086,33 +2081,24 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["request_confirm_text"], reply_markup=get_request_confirm_menu(lang))
             return
 
-        payment_type = get_pending_payment(message.from_user.id)
-        if payment_type not in {"task", "complex"}:
-            user_state[message.from_user.id] = "main"
-            await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
-            return
-
-        payment_amount = get_payment_amount_for_type(payment_type)
-
         d = user_temp.get(message.from_user.id, {})
+        user_profile = get_user(message.from_user.id)
+
         request_id = save_tutor_request(
             user_id=message.from_user.id,
             category=d.get("category", ""),
             subject=d.get("subject", ""),
             client_name=d.get("name", ""),
-            phone=d.get("phone", ""),
+            phone=user_profile.get("phone", ""),
             level=d.get("level", ""),
             goal=d.get("goal", ""),
             preferred_time=d.get("preferred_time", ""),
             lesson_format=d.get("lesson_format", ""),
-            payment_type=payment_type,
-            payment_amount_stars=payment_amount
+            payment_type="",
+            payment_amount_stars=0
         )
 
-        clear_pending_payment(message.from_user.id)
-
-        user = get_user(message.from_user.id)
-        language_name = LANG_NAMES.get(user["language"], user["language"])
+        language_name = LANG_NAMES.get(user_profile["language"], user_profile["language"])
         profile_status = get_profile_status_text(message.from_user.id, lang)
 
         admin_lines = [
@@ -2123,12 +2109,11 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}",
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}",
             f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}",
-            f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}",
+            f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}",
             f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}",
             f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}",
             f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}",
             f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}",
-            f"Payment: {payment_type} | {payment_amount}⭐",
             f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}",
         ]
 
@@ -2242,11 +2227,6 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
-        payment_type = get_pending_payment(message.from_user.id)
-        if payment_type not in {"task", "complex"}:
-            await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
-            return
-
         user_state[message.from_user.id] = "tutor_category_wait"
         user_temp[message.from_user.id] = {}
         await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
@@ -2303,8 +2283,22 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor_login_btn"]:
-        user_state[message.from_user.id] = "tutor_auth_wait"
-        await message.answer(TEXTS[lang]["tutor_auth_text"], reply_markup=get_tutor_auth_menu(lang))
+        user = get_user(message.from_user.id)
+        user_phone = user.get("phone")
+
+        if not user_phone:
+            user_state[message.from_user.id] = "start_phone_wait"
+            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+            return
+
+        if login_tutor_by_phone(message.from_user.id, user_phone):
+            user_state[message.from_user.id] = "tutor_panel"
+            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(message.from_user.id, lang))
+        else:
+            user_temp.setdefault(message.from_user.id, {})
+            user_temp[message.from_user.id]["tutor_phone"] = user_phone
+            user_state[message.from_user.id] = "tutor_register_name_wait"
+            await message.answer(TEXTS[lang]["tutor_enter_name"], reply_markup=back_menu(lang))
         return
 
     if text == TEXTS[lang]["tutor_profile_btn"]:
@@ -2532,24 +2526,11 @@ async def handle_contact(message: types.Message):
     lang = resolve_user_language(message)
     state = user_state.get(message.from_user.id)
 
-    if state == "tutor_phone_wait":
+    if state == "start_phone_wait":
         phone = normalize_phone(message.contact.phone_number)
-        user_temp.setdefault(message.from_user.id, {})
-        user_temp[message.from_user.id]["phone"] = phone
-        user_state[message.from_user.id] = "tutor_level_wait"
-        await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_auth_wait":
-        phone = normalize_phone(message.contact.phone_number)
-        if login_tutor_by_phone(message.from_user.id, phone):
-            user_state[message.from_user.id] = "tutor_panel"
-            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(message.from_user.id, lang))
-        else:
-            user_temp.setdefault(message.from_user.id, {})
-            user_temp[message.from_user.id]["tutor_phone"] = phone
-            user_state[message.from_user.id] = "tutor_register_name_wait"
-            await message.answer(TEXTS[lang]["tutor_enter_name"], reply_markup=back_menu(lang))
+        set_user_phone(message.from_user.id, phone)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["start_phone_saved"], reply_markup=main_menu(lang))
         return
 
 
