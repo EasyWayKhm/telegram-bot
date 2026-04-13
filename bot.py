@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
@@ -10,6 +11,8 @@ from aiogram.types import (
     KeyboardButton,
     LabeledPrice,
     BotCommand,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
 )
 from aiogram.utils import executor
 
@@ -70,6 +73,7 @@ TEXTS = {
         "choose_service": "👇 Обери послугу",
 
         "file_sent": "📩 Файл відправлено адміністратору.",
+        "file_sent_to_tutor": "📩 Файл відправлено Tutor.",
         "no_payment": "❌ Спочатку потрібно оплатити.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
         "pay_success_task": "✅ Оплата 250⭐ пройшла успішно.",
@@ -80,6 +84,10 @@ TEXTS = {
         "system_menu_title": "📋 Меню",
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профіль",
+        "tutor_login_btn": "🎓 Вхід Tutor",
+        "tutor_profile_btn": "📚 Tutor профіль",
+        "tutor_logout_btn": "🚪 Вихід з Tutor-профіля",
+        "tutor_logout_success": "✅ Ти вийшов з Tutor-профіля.",
         "admin_login_btn": "🔐 Вхід адміністратора",
         "admin_profile_btn": "🛠 Admin профіль",
         "admin_logout_btn": "🚪 Вийти з адмін-профілю",
@@ -92,6 +100,7 @@ TEXTS = {
         "profile_until": "Преміум активний до",
         "profile_user": "Користувач",
         "profile_admin": "Адміністратор",
+        "profile_tutor": "Tutor",
         "profile_basic": "Базовий профіль",
         "profile_premium": "Преміум профіль",
         "payments_history_title": "💳 Історія оплат",
@@ -100,7 +109,6 @@ TEXTS = {
         "no_requests": "У тебе ще немає заявок.",
         "change_language_btn": "🌍 Змінити мову",
 
-        "complain_text": "🆘 Напиши своє питання одним повідомленням, і адміністратор отримає його.",
         "complaint_sent": "✅ Повідомлення відправлено адміністратору.",
         "complaint_header": "🆘 Нове повідомлення",
         "complaint_user_id": "ID користувача",
@@ -110,7 +118,6 @@ TEXTS = {
         "complaint_text_label": "Текст",
 
         "support_text": "🆘 Напиши своє питання одним повідомленням, і адміністратор отримає його.",
-        "support_sent": "✅ Повідомлення відправлено адміністратору.",
 
         "ask_admin_login": "Введи логін адміністратора:",
         "ask_admin_password": "Введи пароль адміністратора:",
@@ -127,6 +134,31 @@ TEXTS = {
         "admin_reply_prompt": "Введи ID користувача, якому хочеш відповісти:",
         "admin_reply_text_prompt": "Введи текст відповіді для користувача:",
         "admin_reply_sent": "✅ Повідомлення користувачу відправлено.",
+
+        "tutor_auth_text": "🎓 Для входу Tutor поділись номером телефону або надішли його текстом.",
+        "tutor_enter_name": "Введи своє ім'я для Tutor-профілю:",
+        "tutor_auth_success": "✅ Вхід Tutor успішний.",
+        "tutor_register_success": "✅ Tutor-профіль створено. Вхід виконано.",
+        "tutor_panel_title": "📚 Tutor-панель",
+        "tutor_new_requests_btn": "🆕 Нові заявки",
+        "tutor_my_requests_btn": "📂 Мої заявки",
+        "tutor_no_new_requests": "Немає нових заявок для Tutor.",
+        "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
+        "tutor_take_request_btn": "✅ Взяти в роботу",
+        "tutor_take_success": "✅ Заявку взято в роботу.",
+        "tutor_take_failed": "⚠️ Цю заявку вже взяв інший Tutor.",
+        "tutor_request_taken_user": "✅ Твою заявку взяв Tutor. Він може написати тобі тут у чат.",
+        "tutor_request_detail_title": "📄 Заявка",
+        "tutor_write_user_btn": "💬 Написати користувачу",
+        "tutor_send_file_btn": "📎 Надіслати файл користувачу",
+        "tutor_reply_text_prompt": "Введи повідомлення для користувача:",
+        "tutor_reply_text_sent": "✅ Повідомлення користувачу надіслано.",
+        "tutor_send_file_prompt": "Надішли файл для користувача одним повідомленням.",
+        "tutor_send_file_sent": "✅ Файл користувачу надіслано.",
+        "request_files_title": "📎 Файли по заявці",
+        "no_request_files": "Файлів по цій заявці поки немає.",
+        "file_from_user_caption": "📎 Файл від користувача по заявці",
+        "file_from_tutor_caption": "📎 Файл від Tutor по заявці",
 
         "request_status_new": "Нова",
         "request_status_accepted": "Прийнята",
@@ -187,6 +219,7 @@ TEXTS = {
         "choose_service": "👇 Выберите услугу",
 
         "file_sent": "📩 Файл отправлен администратору.",
+        "file_sent_to_tutor": "📩 Файл отправлен Tutor.",
         "no_payment": "❌ Сначала нужно оплатить.",
         "send_file_now": "📎 Теперь можешь отправить файл.",
         "pay_success_task": "✅ Оплата 250⭐ прошла успешно.",
@@ -197,6 +230,10 @@ TEXTS = {
         "system_menu_title": "📋 Меню",
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профиль",
+        "tutor_login_btn": "🎓 Вход Tutor",
+        "tutor_profile_btn": "📚 Tutor профиль",
+        "tutor_logout_btn": "🚪 Выход из Tutor-профиля",
+        "tutor_logout_success": "✅ Ты вышел из Tutor-профиля.",
         "admin_login_btn": "🔐 Вход администратора",
         "admin_profile_btn": "🛠 Admin профиль",
         "admin_logout_btn": "🚪 Выйти из админ-профиля",
@@ -209,6 +246,7 @@ TEXTS = {
         "profile_until": "Премиум активен до",
         "profile_user": "Пользователь",
         "profile_admin": "Администратор",
+        "profile_tutor": "Tutor",
         "profile_basic": "Базовый профиль",
         "profile_premium": "Премиум профиль",
         "payments_history_title": "💳 История оплат",
@@ -217,7 +255,6 @@ TEXTS = {
         "no_requests": "У тебя ещё нет заявок.",
         "change_language_btn": "🌍 Изменить язык",
 
-        "complain_text": "🆘 Напиши свой вопрос одним сообщением, и администратор его получит.",
         "complaint_sent": "✅ Сообщение отправлено администратору.",
         "complaint_header": "🆘 Новое сообщение",
         "complaint_user_id": "ID пользователя",
@@ -227,7 +264,6 @@ TEXTS = {
         "complaint_text_label": "Текст",
 
         "support_text": "🆘 Напиши свой вопрос одним сообщением, и администратор его получит.",
-        "support_sent": "✅ Сообщение отправлено администратору.",
 
         "ask_admin_login": "Введите логин администратора:",
         "ask_admin_password": "Введите пароль администратора:",
@@ -244,6 +280,31 @@ TEXTS = {
         "admin_reply_prompt": "Введите ID пользователя, которому хотите ответить:",
         "admin_reply_text_prompt": "Введите текст ответа для пользователя:",
         "admin_reply_sent": "✅ Сообщение пользователю отправлено.",
+
+        "tutor_auth_text": "🎓 Для входа Tutor поделись номером телефона или отправь его текстом.",
+        "tutor_enter_name": "Введи своё имя для Tutor-профиля:",
+        "tutor_auth_success": "✅ Вход Tutor успешный.",
+        "tutor_register_success": "✅ Tutor-профиль создан. Вход выполнен.",
+        "tutor_panel_title": "📚 Tutor-панель",
+        "tutor_new_requests_btn": "🆕 Новые заявки",
+        "tutor_my_requests_btn": "📂 Мои заявки",
+        "tutor_no_new_requests": "Нет новых заявок для Tutor.",
+        "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
+        "tutor_take_request_btn": "✅ Взять в работу",
+        "tutor_take_success": "✅ Заявка взята в работу.",
+        "tutor_take_failed": "⚠️ Эту заявку уже взял другой Tutor.",
+        "tutor_request_taken_user": "✅ Твою заявку взял Tutor. Он может написать тебе здесь в чат.",
+        "tutor_request_detail_title": "📄 Заявка",
+        "tutor_write_user_btn": "💬 Написать пользователю",
+        "tutor_send_file_btn": "📎 Отправить файл пользователю",
+        "tutor_reply_text_prompt": "Введи сообщение для пользователя:",
+        "tutor_reply_text_sent": "✅ Сообщение пользователю отправлено.",
+        "tutor_send_file_prompt": "Отправь файл пользователю одним сообщением.",
+        "tutor_send_file_sent": "✅ Файл пользователю отправлен.",
+        "request_files_title": "📎 Файлы по заявке",
+        "no_request_files": "Файлов по этой заявке пока нет.",
+        "file_from_user_caption": "📎 Файл от пользователя по заявке",
+        "file_from_tutor_caption": "📎 Файл от Tutor по заявке",
 
         "request_status_new": "Новая",
         "request_status_accepted": "Принята",
@@ -271,7 +332,7 @@ TEXTS = {
         "tutor_name": "Имя",
         "tutor_phone": "Телефон",
         "phone_invalid": "❌ Пожалуйста, введи корректный номер телефона или нажми кнопку.",
-        "no_access": "⛔ Немає доступу.",
+        "no_access": "⛔ Нет доступа.",
         "user_not_found": "Пользователь не найден.",
         "error_try_again": "Ошибка. Попробуй ещё раз.",
         "admin_message_prefix": "💬 Сообщение от администратора:\n\n",
@@ -293,6 +354,23 @@ def db():
     return sqlite3.connect(DB_PATH)
 
 
+def column_exists(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    return column_name in columns
+
+
+def normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    value = phone.strip()
+    has_plus = value.startswith("+")
+    digits = re.sub(r"\D", "", value)
+    if not digits:
+        return ""
+    return f"+{digits}" if has_plus else digits
+
+
 def init_db():
     conn = db()
     cur = conn.cursor()
@@ -303,6 +381,7 @@ def init_db():
             language TEXT DEFAULT 'ua',
             manual_language INTEGER DEFAULT 0,
             is_admin INTEGER DEFAULT 0,
+            is_tutor INTEGER DEFAULT 0,
             premium_until TEXT,
             pending_payment TEXT,
             premium_remind_3days_sent INTEGER DEFAULT 0,
@@ -313,6 +392,16 @@ def init_db():
     cur.execute("""
         CREATE TABLE IF NOT EXISTS admins (
             user_id INTEGER PRIMARY KEY
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tutor_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER UNIQUE NOT NULL,
+            full_name TEXT NOT NULL,
+            phone TEXT UNIQUE NOT NULL,
+            created_at TEXT NOT NULL
         )
     """)
 
@@ -330,6 +419,19 @@ def init_db():
             lesson_format TEXT,
             status TEXT NOT NULL DEFAULT 'new',
             admin_reply TEXT,
+            created_at TEXT NOT NULL,
+            assigned_tutor_id INTEGER
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS request_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_id INTEGER NOT NULL,
+            sender_user_id INTEGER NOT NULL,
+            sender_role TEXT NOT NULL,
+            file_id TEXT NOT NULL,
+            file_name TEXT,
             created_at TEXT NOT NULL
         )
     """)
@@ -344,6 +446,12 @@ def init_db():
         )
     """)
 
+    if not column_exists(cur, "users", "is_tutor"):
+        cur.execute("ALTER TABLE users ADD COLUMN is_tutor INTEGER DEFAULT 0")
+
+    if not column_exists(cur, "tutor_requests", "assigned_tutor_id"):
+        cur.execute("ALTER TABLE tutor_requests ADD COLUMN assigned_tutor_id INTEGER")
+
     conn.commit()
     conn.close()
 
@@ -357,11 +465,11 @@ def ensure_user(user_id: int):
     if not row:
         cur.execute("""
             INSERT INTO users (
-                user_id, language, manual_language, is_admin,
+                user_id, language, manual_language, is_admin, is_tutor,
                 premium_until, pending_payment,
                 premium_remind_3days_sent, premium_expired_sent
             )
-            VALUES (?, 'ua', 0, 0, NULL, NULL, 0, 0)
+            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, 0, 0)
         """, (user_id,))
         conn.commit()
 
@@ -373,7 +481,7 @@ def get_user(user_id: int):
     conn = db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT user_id, language, manual_language, is_admin,
+        SELECT user_id, language, manual_language, is_admin, is_tutor,
                premium_until, pending_payment,
                premium_remind_3days_sent, premium_expired_sent
         FROM users
@@ -387,10 +495,11 @@ def get_user(user_id: int):
         "language": row[1],
         "manual_language": bool(row[2]),
         "is_admin": bool(row[3]),
-        "premium_until": row[4],
-        "pending_payment": row[5],
-        "premium_remind_3days_sent": bool(row[6]),
-        "premium_expired_sent": bool(row[7]),
+        "is_tutor": bool(row[4]),
+        "premium_until": row[5],
+        "pending_payment": row[6],
+        "premium_remind_3days_sent": bool(row[7]),
+        "premium_expired_sent": bool(row[8]),
     }
 
 
@@ -469,6 +578,122 @@ def get_admins():
 
 def is_admin_user(user_id: int):
     return user_id in get_admins()
+
+
+def login_tutor(user_id: int):
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_tutor = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def logout_tutor(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET is_tutor = 0 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def is_tutor_user(user_id: int):
+    return get_user(user_id)["is_tutor"]
+
+
+def get_tutor_profile(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, user_id, full_name, phone, created_at
+        FROM tutor_profiles
+        WHERE user_id = ?
+    """, (user_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "full_name": row[2],
+        "phone": row[3],
+        "created_at": row[4],
+    }
+
+
+def get_tutor_profile_by_phone(phone: str):
+    normalized = normalize_phone(phone)
+    if not normalized:
+        return None
+
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, user_id, full_name, phone, created_at
+        FROM tutor_profiles
+        WHERE phone = ?
+    """, (normalized,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "full_name": row[2],
+        "phone": row[3],
+        "created_at": row[4],
+    }
+
+
+def register_tutor_profile(user_id: int, full_name: str, phone: str):
+    ensure_user(user_id)
+    normalized = normalize_phone(phone)
+    conn = db()
+    cur = conn.cursor()
+
+    existing = get_tutor_profile_by_phone(normalized)
+    if existing:
+        cur.execute("""
+            UPDATE tutor_profiles
+            SET user_id = ?, full_name = ?
+            WHERE id = ?
+        """, (user_id, full_name, existing["id"]))
+    else:
+        cur.execute("""
+            INSERT INTO tutor_profiles (user_id, full_name, phone, created_at)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, full_name, normalized, datetime.now(timezone.utc).isoformat()))
+
+    cur.execute("UPDATE users SET is_tutor = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+
+def login_tutor_by_phone(user_id: int, phone: str) -> bool:
+    ensure_user(user_id)
+    normalized = normalize_phone(phone)
+    profile = get_tutor_profile_by_phone(normalized)
+
+    if not profile:
+        return False
+
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE tutor_profiles
+        SET user_id = ?
+        WHERE id = ?
+    """, (user_id, profile["id"]))
+    cur.execute("UPDATE users SET is_tutor = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 
 def add_payment(user_id: int, payment_type: str, amount: int):
@@ -617,9 +842,9 @@ def save_tutor_request(
     cur.execute("""
         INSERT INTO tutor_requests (
             user_id, category, subject, client_name, phone,
-            level, goal, preferred_time, lesson_format, status, created_at
+            level, goal, preferred_time, lesson_format, status, created_at, assigned_tutor_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
     """, (
         user_id,
         category,
@@ -638,6 +863,7 @@ def save_tutor_request(
     conn.close()
     return request_id
 
+
 def get_new_requests():
     conn = db()
     cur = conn.cursor()
@@ -650,6 +876,150 @@ def get_new_requests():
     rows = cur.fetchall()
     conn.close()
     return rows
+
+
+def get_unassigned_tutor_requests():
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, created_at
+        FROM tutor_requests
+        WHERE status = ? AND assigned_tutor_id IS NULL
+        ORDER BY id DESC
+    """, (REQUEST_STATUS_NEW,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def get_tutor_assigned_requests(tutor_user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, status, created_at
+        FROM tutor_requests
+        WHERE assigned_tutor_id = ?
+        ORDER BY id DESC
+    """, (tutor_user_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def get_request_by_id(request_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, user_id, category, subject, client_name, phone, level, goal,
+               preferred_time, lesson_format, status, created_at, assigned_tutor_id
+        FROM tutor_requests
+        WHERE id = ?
+    """, (request_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "category": row[2],
+        "subject": row[3],
+        "client_name": row[4],
+        "phone": row[5],
+        "level": row[6],
+        "goal": row[7],
+        "preferred_time": row[8],
+        "lesson_format": row[9],
+        "status": row[10],
+        "created_at": row[11],
+        "assigned_tutor_id": row[12],
+    }
+
+def assign_request_to_tutor(request_id: int, tutor_user_id: int) -> bool:
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT status, assigned_tutor_id
+        FROM tutor_requests
+        WHERE id = ?
+    """, (request_id,))
+    row = cur.fetchone()
+
+    if not row:
+        conn.close()
+        return False
+
+    status, assigned_tutor_id = row
+    if assigned_tutor_id is not None or status != REQUEST_STATUS_NEW:
+        conn.close()
+        return False
+
+    cur.execute("""
+        UPDATE tutor_requests
+        SET assigned_tutor_id = ?, status = ?
+        WHERE id = ?
+    """, (tutor_user_id, REQUEST_STATUS_ACCEPTED, request_id))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_request_files(request_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, sender_user_id, sender_role, file_id, file_name, created_at
+        FROM request_files
+        WHERE request_id = ?
+        ORDER BY id ASC
+    """, (request_id,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def save_request_file(request_id: int, sender_user_id: int, sender_role: str, file_id: str, file_name: str | None):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO request_files (
+            request_id, sender_user_id, sender_role, file_id, file_name, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        request_id,
+        sender_user_id,
+        sender_role,
+        file_id,
+        file_name or "",
+        datetime.now(timezone.utc).isoformat()
+    ))
+    conn.commit()
+    conn.close()
+
+
+def get_latest_active_assigned_request_for_user(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, assigned_tutor_id
+        FROM tutor_requests
+        WHERE user_id = ?
+          AND assigned_tutor_id IS NOT NULL
+          AND status IN (?, ?, ?)
+        ORDER BY id DESC
+        LIMIT 1
+    """, (user_id, REQUEST_STATUS_ACCEPTED, REQUEST_STATUS_IN_PROGRESS, REQUEST_STATUS_NEW))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        return None
+
+    return {"id": row[0], "assigned_tutor_id": row[1]}
 
 
 def get_premium_users():
@@ -669,7 +1039,11 @@ def get_premium_users():
 def search_user_by_id(user_id: int):
     conn = db()
     cur = conn.cursor()
-    cur.execute("SELECT user_id, language, is_admin, premium_until FROM users WHERE user_id = ?", (user_id,))
+    cur.execute("""
+        SELECT user_id, language, is_admin, is_tutor, premium_until
+        FROM users
+        WHERE user_id = ?
+    """, (user_id,))
     user = cur.fetchone()
 
     cur.execute("""
@@ -742,7 +1116,14 @@ async def check_premium_reminders():
 
 def build_profile_text(user_id: int, lang: str):
     user = get_user(user_id)
-    role = TEXTS[lang]["profile_admin"] if is_admin_user(user_id) or user["is_admin"] else TEXTS[lang]["profile_user"]
+
+    if is_admin_user(user_id):
+        role = TEXTS[lang]["profile_admin"]
+    elif is_tutor_user(user_id):
+        role = TEXTS[lang]["profile_tutor"]
+    else:
+        role = TEXTS[lang]["profile_user"]
+
     status = get_profile_status_text(user_id, lang)
     language_name = LANG_NAMES.get(user["language"], user["language"])
 
@@ -753,6 +1134,11 @@ def build_profile_text(user_id: int, lang: str):
         f"{TEXTS[lang]['profile_language']}: {language_name}",
         f"{TEXTS[lang]['profile_status']}: {status}",
     ]
+
+    tutor_profile = get_tutor_profile(user_id)
+    if tutor_profile:
+        lines.append(f"{TEXTS[lang]['tutor_name']}: {tutor_profile['full_name']}")
+        lines.append(f"{TEXTS[lang]['tutor_phone']}: {tutor_profile['phone']}")
 
     premium_until = premium_until_text(user_id)
     if premium_until:
@@ -781,6 +1167,22 @@ def build_profile_text(user_id: int, lang: str):
     return "\n".join(lines)
 
 
+def build_request_detail_text(request_data: dict, lang: str):
+    return (
+        f"{TEXTS[lang]['tutor_request_detail_title']} #{request_data['id']}\n\n"
+        f"{TEXTS[lang]['complaint_user_id']}: {request_data['user_id']}\n"
+        f"{TEXTS[lang]['category_label']}: {request_data.get('category') or '-'}\n"
+        f"{TEXTS[lang]['tutor_subject']}: {request_data.get('subject') or '-'}\n"
+        f"{TEXTS[lang]['tutor_name']}: {request_data.get('client_name') or '-'}\n"
+        f"{TEXTS[lang]['tutor_phone']}: {request_data.get('phone') or '-'}\n"
+        f"{TEXTS[lang]['level_label']}: {request_data.get('level') or '-'}\n"
+        f"{TEXTS[lang]['goal_label']}: {request_data.get('goal') or '-'}\n"
+        f"{TEXTS[lang]['preferred_time_label']}: {request_data.get('preferred_time') or '-'}\n"
+        f"{TEXTS[lang]['format_label']}: {request_data.get('lesson_format') or '-'}\n"
+        f"{TEXTS[lang]['status_label']}: {get_request_status_text(request_data.get('status', ''), lang)}"
+    )
+
+
 def main_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
@@ -796,15 +1198,22 @@ def back_menu(lang: str = "ua"):
     return kb
 
 
-def system_menu(lang: str = "ua", is_admin: bool = False):
+def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["my_profile_btn"])
+
+    if is_tutor:
+        kb.row(TEXTS[lang]["tutor_profile_btn"])
+        kb.row(TEXTS[lang]["tutor_logout_btn"])
+    else:
+        if not is_admin:
+            kb.row(TEXTS[lang]["premium_menu_btn"])
+        kb.row(TEXTS[lang]["tutor_login_btn"])
 
     if is_admin:
         kb.row(TEXTS[lang]["admin_profile_btn"])
         kb.row(TEXTS[lang]["admin_logout_btn"])
     else:
-        kb.row(TEXTS[lang]["premium_menu_btn"])
         kb.row(TEXTS[lang]["admin_login_btn"])
 
     kb.row(TEXTS[lang]["back"])
@@ -831,6 +1240,14 @@ def admin_menu(lang: str = "ua"):
     kb.row(TEXTS[lang]["admin_premium_users_btn"])
     kb.row(TEXTS[lang]["admin_search_btn"])
     kb.row(TEXTS[lang]["admin_reply_btn"])
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def tutor_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["tutor_new_requests_btn"])
+    kb.row(TEXTS[lang]["tutor_my_requests_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -897,6 +1314,159 @@ def get_request_confirm_menu(lang: str = "ua"):
     kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
+
+
+def get_tutor_auth_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def build_take_request_keyboard(request_id: int, lang: str):
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton(
+        TEXTS[lang]["tutor_take_request_btn"],
+        callback_data=f"take_request:{request_id}"
+    ))
+    return kb
+
+
+def build_tutor_requests_keyboard(rows, lang: str):
+    kb = InlineKeyboardMarkup()
+    for row in rows:
+        request_id = row[0]
+        subject = row[3]
+        kb.add(InlineKeyboardButton(
+            f"#{request_id} | {subject}",
+            callback_data=f"open_tutor_request:{request_id}"
+        ))
+    return kb
+
+
+def build_tutor_request_actions_keyboard(request_id: int, lang: str):
+    kb = InlineKeyboardMarkup()
+    kb.add(InlineKeyboardButton(
+        TEXTS[lang]["tutor_write_user_btn"],
+        callback_data=f"tutor_msg_user:{request_id}"
+    ))
+    kb.add(InlineKeyboardButton(
+        TEXTS[lang]["tutor_send_file_btn"],
+        callback_data=f"tutor_file_user:{request_id}"
+    ))
+    return kb
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
+async def take_request_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    lang = get_user_language(user_id)
+
+    if not is_tutor_user(user_id):
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    request_id = int(callback_query.data.split(":")[1])
+
+    if not assign_request_to_tutor(request_id, user_id):
+        await callback_query.answer(TEXTS[lang]["tutor_take_failed"], show_alert=True)
+        return
+
+    request_data = get_request_by_id(request_id)
+    if request_data:
+        try:
+            await bot.send_message(request_data["user_id"], TEXTS[lang]["tutor_request_taken_user"])
+        except Exception as e:
+            logging.warning(f"Failed to notify user about tutor assignment: {e}")
+
+    await callback_query.answer(TEXTS[lang]["tutor_take_success"])
+    await callback_query.message.edit_reply_markup(reply_markup=None)
+    await callback_query.message.answer(TEXTS[lang]["tutor_take_success"], reply_markup=tutor_menu(lang))
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("open_tutor_request:"))
+async def open_tutor_request_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    lang = get_user_language(user_id)
+
+    if not is_tutor_user(user_id):
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    request_id = int(callback_query.data.split(":")[1])
+    request_data = get_request_by_id(request_id)
+
+    if not request_data or request_data["assigned_tutor_id"] != user_id:
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    lines = [build_request_detail_text(request_data, lang), ""]
+    files = get_request_files(request_id)
+    lines.append(TEXTS[lang]["request_files_title"] + ":")
+
+    if files:
+        for _, sender_user_id, sender_role, _, file_name, created_at in files:
+            sender_text = "user" if sender_role == "user" else "tutor"
+            lines.append(f"• {file_name or 'file'} | {sender_text} | {created_at[:16]}")
+    else:
+        lines.append(TEXTS[lang]["no_request_files"])
+
+    user_state[user_id] = "tutor_panel"
+    await callback_query.message.answer(
+        "\n".join(lines),
+        reply_markup=build_tutor_request_actions_keyboard(request_id, lang)
+    )
+    await callback_query.answer()
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_msg_user:"))
+async def tutor_msg_user_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    lang = get_user_language(user_id)
+
+    if not is_tutor_user(user_id):
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    request_id = int(callback_query.data.split(":")[1])
+    request_data = get_request_by_id(request_id)
+
+    if not request_data or request_data["assigned_tutor_id"] != user_id:
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    user_temp.setdefault(user_id, {})
+    user_temp[user_id]["reply_user_id"] = request_data["user_id"]
+    user_temp[user_id]["reply_request_id"] = request_id
+    user_state[user_id] = "tutor_reply_text_wait"
+
+    await callback_query.message.answer(TEXTS[lang]["tutor_reply_text_prompt"], reply_markup=back_menu(lang))
+    await callback_query.answer()
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_file_user:"))
+async def tutor_file_user_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    lang = get_user_language(user_id)
+
+    if not is_tutor_user(user_id):
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    request_id = int(callback_query.data.split(":")[1])
+    request_data = get_request_by_id(request_id)
+
+    if not request_data or request_data["assigned_tutor_id"] != user_id:
+        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
+        return
+
+    user_temp.setdefault(user_id, {})
+    user_temp[user_id]["reply_user_id"] = request_data["user_id"]
+    user_temp[user_id]["reply_request_id"] = request_id
+    user_state[user_id] = "tutor_send_file_wait"
+
+    await callback_query.message.answer(TEXTS[lang]["tutor_send_file_prompt"], reply_markup=back_menu(lang))
+    await callback_query.answer()
 
 
 @dp.message_handler(commands=["start"])
@@ -1001,31 +1571,92 @@ async def successful_payment(message: types.Message):
 @dp.message_handler(content_types=types.ContentType.DOCUMENT)
 async def handle_document(message: types.Message):
     lang = resolve_user_language(message)
+    state = user_state.get(message.from_user.id, "main")
     pending_payment = get_pending_payment(message.from_user.id)
 
-    if pending_payment not in {"task", "complex"}:
-        await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
+    if state == "tutor_send_file_wait":
+        if not is_tutor_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        reply_user_id = user_temp.get(message.from_user.id, {}).get("reply_user_id")
+        request_id = user_temp.get(message.from_user.id, {}).get("reply_request_id")
+
+        if not reply_user_id or not request_id:
+            user_state[message.from_user.id] = "tutor_panel"
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=tutor_menu(lang))
+            return
+
+        caption = f"{TEXTS[lang]['file_from_tutor_caption']} #{request_id}"
+        try:
+            await bot.send_document(
+                chat_id=reply_user_id,
+                document=message.document.file_id,
+                caption=caption
+            )
+            save_request_file(
+                request_id=request_id,
+                sender_user_id=message.from_user.id,
+                sender_role="tutor",
+                file_id=message.document.file_id,
+                file_name=message.document.file_name
+            )
+            await message.answer(TEXTS[lang]["tutor_send_file_sent"], reply_markup=tutor_menu(lang))
+        except Exception as e:
+            await message.answer(f"❌ {e}", reply_markup=tutor_menu(lang))
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "tutor_panel"
         return
 
-    caption_lines = [
-        f"{TEXTS[lang]['new_order_prefix']}: {pending_payment}",
-        f"{TEXTS[lang]['user_id_label']}: {message.from_user.id}",
-    ]
+    if pending_payment in {"task", "complex"}:
+        caption_lines = [
+            f"{TEXTS[lang]['new_order_prefix']}: {pending_payment}",
+            f"{TEXTS[lang]['user_id_label']}: {message.from_user.id}",
+        ]
 
-    if message.from_user.username:
-        caption_lines.append(f"{TEXTS[lang]['username_label']}: @{message.from_user.username}")
+        if message.from_user.username:
+            caption_lines.append(f"{TEXTS[lang]['username_label']}: @{message.from_user.username}")
 
-    caption = "\n".join(caption_lines)
+        caption = "\n".join(caption_lines)
 
-    await bot.send_document(
-        chat_id=OWNER_ID,
-        document=message.document.file_id,
-        caption=caption
-    )
+        await bot.send_document(
+            chat_id=OWNER_ID,
+            document=message.document.file_id,
+            caption=caption
+        )
 
-    await message.answer(TEXTS[lang]["file_sent"], reply_markup=main_menu(lang))
-    clear_pending_payment(message.from_user.id)
-    user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["file_sent"], reply_markup=main_menu(lang))
+        clear_pending_payment(message.from_user.id)
+        user_state[message.from_user.id] = "main"
+        return
+
+    active_request = get_latest_active_assigned_request_for_user(message.from_user.id)
+    if active_request:
+        request_id = active_request["id"]
+        tutor_user_id = active_request["assigned_tutor_id"]
+
+        save_request_file(
+            request_id=request_id,
+            sender_user_id=message.from_user.id,
+            sender_role="user",
+            file_id=message.document.file_id,
+            file_name=message.document.file_name
+        )
+
+        try:
+            await bot.send_document(
+                chat_id=tutor_user_id,
+                document=message.document.file_id,
+                caption=f"{TEXTS[lang]['file_from_user_caption']} #{request_id}"
+            )
+        except Exception as e:
+            logging.warning(f"Failed to send request file to tutor {tutor_user_id}: {e}")
+
+        await message.answer(TEXTS[lang]["file_sent_to_tutor"], reply_markup=main_menu(lang))
+        return
+
+    await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
 
 
 @dp.message_handler(content_types=types.ContentType.TEXT)
@@ -1060,9 +1691,65 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         return
 
+    if state == "tutor_auth_wait":
+        normalized = normalize_phone(text)
+        if not normalized:
+            await message.answer(TEXTS[lang]["phone_invalid"], reply_markup=get_tutor_auth_menu(lang))
+            return
+
+        if login_tutor_by_phone(message.from_user.id, normalized):
+            user_state[message.from_user.id] = "tutor_panel"
+            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(lang))
+        else:
+            user_temp.setdefault(message.from_user.id, {})
+            user_temp[message.from_user.id]["tutor_phone"] = normalized
+            user_state[message.from_user.id] = "tutor_register_name_wait"
+            await message.answer(TEXTS[lang]["tutor_enter_name"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_register_name_wait":
+        phone = user_temp.get(message.from_user.id, {}).get("tutor_phone")
+        if not phone:
+            user_state[message.from_user.id] = "main"
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=main_menu(lang))
+            return
+
+        register_tutor_profile(message.from_user.id, text.strip(), phone)
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "tutor_panel"
+        await message.answer(TEXTS[lang]["tutor_register_success"], reply_markup=tutor_menu(lang))
+        return
+
+    if state == "tutor_reply_text_wait":
+        if not is_tutor_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        reply_user_id = user_temp.get(message.from_user.id, {}).get("reply_user_id")
+        if not reply_user_id:
+            user_state[message.from_user.id] = "tutor_panel"
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=tutor_menu(lang))
+            return
+
+        try:
+            await bot.send_message(reply_user_id, f"💬 Tutor:\n\n{text}")
+            await message.answer(TEXTS[lang]["tutor_reply_text_sent"], reply_markup=tutor_menu(lang))
+        except Exception as e:
+            await message.answer(f"❌ {e}", reply_markup=tutor_menu(lang))
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "tutor_panel"
+        return
+
     if state == "complaint_wait":
         user = get_user(message.from_user.id)
-        profile_status = get_profile_status_text(message.from_user.id, lang)
+        if is_admin_user(message.from_user.id):
+            profile_status = TEXTS[lang]["profile_admin"]
+        elif is_tutor_user(message.from_user.id):
+            profile_status = TEXTS[lang]["profile_tutor"]
+        else:
+            profile_status = get_profile_status_text(message.from_user.id, lang)
+
         language_name = LANG_NAMES.get(user["language"], user["language"])
 
         lines = [
@@ -1133,7 +1820,7 @@ async def menu(message: types.Message):
         return
 
     if state == "tutor_phone_wait":
-        phone = text.strip()
+        phone = normalize_phone(text)
         if len(phone) < 6:
             await message.answer(TEXTS[lang]["phone_invalid"], reply_markup=get_phone_menu(lang))
             return
@@ -1262,8 +1949,15 @@ async def menu(message: types.Message):
             user_state[message.from_user.id] = "admin_panel"
             return
 
-        _, user_language, is_admin_flag, premium_until = user_row
-        role = TEXTS[lang]["profile_admin"] if is_admin_flag else TEXTS[lang]["profile_user"]
+        _, user_language, is_admin_flag, is_tutor_flag, premium_until = user_row
+
+        if is_admin_flag:
+            role = TEXTS[lang]["profile_admin"]
+        elif is_tutor_flag:
+            role = TEXTS[lang]["profile_tutor"]
+        else:
+            role = TEXTS[lang]["profile_user"]
+
         status = TEXTS[lang]["profile_premium"] if premium_until else TEXTS[lang]["profile_basic"]
 
         lines = [
@@ -1359,7 +2053,11 @@ async def menu(message: types.Message):
         user_state[message.from_user.id] = "system_menu"
         await message.answer(
             TEXTS[lang]["system_menu_title"],
-            reply_markup=system_menu(lang, is_admin=is_admin_user(message.from_user.id))
+            reply_markup=system_menu(
+                lang,
+                is_admin=is_admin_user(message.from_user.id),
+                is_tutor=is_tutor_user(message.from_user.id)
+            )
         )
         return
 
@@ -1381,6 +2079,26 @@ async def menu(message: types.Message):
             prices=[LabeledPrice(label="Premium Profile", amount=2500)],
             start_parameter="premium_profile"
         )
+        return
+
+    if text == TEXTS[lang]["tutor_login_btn"]:
+        user_state[message.from_user.id] = "tutor_auth_wait"
+        await message.answer(TEXTS[lang]["tutor_auth_text"], reply_markup=get_tutor_auth_menu(lang))
+        return
+
+    if text == TEXTS[lang]["tutor_profile_btn"]:
+        if not is_tutor_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "tutor_panel"
+        await message.answer(TEXTS[lang]["tutor_panel_title"], reply_markup=tutor_menu(lang))
+        return
+
+    if text == TEXTS[lang]["tutor_logout_btn"]:
+        logout_tutor(message.from_user.id)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["tutor_logout_success"], reply_markup=main_menu(lang))
         return
 
     if text == TEXTS[lang]["admin_login_btn"]:
@@ -1464,6 +2182,53 @@ async def menu(message: types.Message):
         )
         return
 
+    if text == TEXTS[lang]["tutor_new_requests_btn"]:
+        if not is_tutor_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        rows = get_unassigned_tutor_requests()
+        if not rows:
+            await message.answer(TEXTS[lang]["tutor_no_new_requests"], reply_markup=tutor_menu(lang))
+            return
+
+        for request_id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, created_at in rows:
+            request_text = (
+                f"{TEXTS[lang]['tutor_request_detail_title']} #{request_id}\n\n"
+                f"{TEXTS[lang]['complaint_user_id']}: {user_id}\n"
+                f"{TEXTS[lang]['category_label']}: {category or '-'}\n"
+                f"{TEXTS[lang]['tutor_subject']}: {subject}\n"
+                f"{TEXTS[lang]['tutor_name']}: {client_name}\n"
+                f"{TEXTS[lang]['tutor_phone']}: {phone}\n"
+                f"{TEXTS[lang]['level_label']}: {level or '-'}\n"
+                f"{TEXTS[lang]['goal_label']}: {goal or '-'}\n"
+                f"{TEXTS[lang]['preferred_time_label']}: {preferred_time or '-'}\n"
+                f"{TEXTS[lang]['format_label']}: {lesson_format or '-'}\n"
+                f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}\n"
+                f"Created: {created_at[:16]}"
+            )
+            await message.answer(
+                request_text,
+                reply_markup=build_take_request_keyboard(request_id, lang)
+            )
+        return
+
+    if text == TEXTS[lang]["tutor_my_requests_btn"]:
+        if not is_tutor_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        rows = get_tutor_assigned_requests(message.from_user.id)
+        if not rows:
+            await message.answer(TEXTS[lang]["tutor_no_my_requests"], reply_markup=tutor_menu(lang))
+            return
+
+        await message.answer(
+            TEXTS[lang]["tutor_my_requests_btn"] + ":",
+            reply_markup=build_tutor_requests_keyboard(rows, lang)
+        )
+        return
+
     if text == TEXTS[lang]["admin_new_requests_btn"]:
         if not is_admin_user(message.from_user.id):
             await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
@@ -1528,16 +2293,27 @@ async def menu(message: types.Message):
 @dp.message_handler(content_types=types.ContentType.CONTACT)
 async def handle_contact(message: types.Message):
     lang = resolve_user_language(message)
+    state = user_state.get(message.from_user.id)
 
-    if user_state.get(message.from_user.id) != "tutor_phone_wait":
+    if state == "tutor_phone_wait":
+        phone = normalize_phone(message.contact.phone_number)
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["phone"] = phone
+        user_state[message.from_user.id] = "tutor_level_wait"
+        await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
         return
 
-    phone = message.contact.phone_number
-    user_temp.setdefault(message.from_user.id, {})
-    user_temp[message.from_user.id]["phone"] = phone
-    user_state[message.from_user.id] = "tutor_level_wait"
-
-    await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
+    if state == "tutor_auth_wait":
+        phone = normalize_phone(message.contact.phone_number)
+        if login_tutor_by_phone(message.from_user.id, phone):
+            user_state[message.from_user.id] = "tutor_panel"
+            await message.answer(TEXTS[lang]["tutor_auth_success"], reply_markup=tutor_menu(lang))
+        else:
+            user_temp.setdefault(message.from_user.id, {})
+            user_temp[message.from_user.id]["tutor_phone"] = phone
+            user_state[message.from_user.id] = "tutor_register_name_wait"
+            await message.answer(TEXTS[lang]["tutor_enter_name"], reply_markup=back_menu(lang))
+        return
 
 
 async def set_bot_commands():
