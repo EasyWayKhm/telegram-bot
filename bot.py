@@ -44,27 +44,16 @@ REQUEST_STATUS_DONE = "done"
 LANG_BUTTONS = {
     "🇺🇦 Українська": "ua",
     "🇷🇺 Русский": "ru",
-    "🇬🇧 English": "en",
-    "🇩🇪 Deutsch": "de",
-    "🇫🇷 Français": "fr",
-    "🇮🇹 Italiano": "it",
-    "🇪🇸 Español": "es",
-    "🇫🇮 Suomi": "fi",
 }
 
 LANG_NAMES = {
     "ua": "Українська",
     "ru": "Русский",
-    "en": "English",
-    "de": "Deutsch",
-    "fr": "Français",
-    "it": "Italiano",
-    "es": "Español",
-    "fi": "Suomi",
 }
 
 TEXTS = {
     "ua": {
+        "language_text": "👋 Вибери мову бота",
         "main_menu_hint": "👋 Обери дію",
         "task": "Виконати завдання🙏",
         "tutor": "Потрібен репетитор💪",
@@ -72,12 +61,14 @@ TEXTS = {
         "support_btn": "🆘 Підтримка",
         "menu_btn": "📋 Меню",
         "back": "⬅️ Назад",
+
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
         "premium_profile": "Преміум профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "pay_premium_profile_btn": "Оплатити преміум профіль (2500⭐)",
         "choose_service": "👇 Обери послугу",
+
         "file_sent": "📩 Файл відправлено адміністратору.",
         "no_payment": "❌ Спочатку потрібно оплатити.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
@@ -87,9 +78,9 @@ TEXTS = {
         "premium_profile_activated": "💎 Преміум профіль активовано на 30 днів.",
 
         "system_menu_title": "📋 Меню",
-        "admin_login_btn": "🔐 Вхід адміністратора",
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профіль",
+        "admin_login_btn": "🔐 Вхід адміністратора",
 
         "profile_title": "👤 Моя анкета",
         "profile_role": "Тип профілю",
@@ -100,23 +91,23 @@ TEXTS = {
         "profile_admin": "Адміністратор",
         "profile_basic": "Базовий профіль",
         "profile_premium": "Преміум профіль",
-        "payments_history_title": "💳 Історія оплат і замовлень",
-        "orders_history_title": "📦 Історія замовлень",
-        "no_payments_history": "Історія оплат і замовлень поки порожня.",
+        "payments_history_title": "💳 Історія оплат",
+        "orders_history_title": "📦 Історія заявок",
+        "no_payments_history": "Історія оплат поки порожня.",
         "no_requests": "У тебе ще немає заявок.",
+        "change_language_btn": "🌍 Змінити мову",
 
-        "complain_btn": "🚫 Поскаржитися",
-        "complain_text": "⚠️ Напиши свою скаргу одним повідомленням, і адміністратори її побачать.",
-        "complaint_sent": "✅ Скаргу відправлено адміністраторам.",
-        "complaint_header": "⚠️ Нова скарга",
+        "complain_text": "🆘 Напиши своє питання одним повідомленням, і адміністратор отримає його.",
+        "complaint_sent": "✅ Повідомлення відправлено адміністратору.",
+        "complaint_header": "🆘 Нове повідомлення",
         "complaint_user_id": "ID користувача",
         "complaint_username": "Username",
         "complaint_language": "Мова",
         "complaint_profile": "Профіль",
-        "complaint_text_label": "Текст скарги",
+        "complaint_text_label": "Текст",
 
         "support_text": "🆘 Напиши своє питання одним повідомленням, і адміністратор отримає його.",
-        "support_sent": "✅ Повідомлення в підтримку відправлено.",
+        "support_sent": "✅ Повідомлення відправлено адміністратору.",
 
         "ask_admin_login": "Введи логін адміністратора:",
         "ask_admin_password": "Введи пароль адміністратора:",
@@ -141,19 +132,127 @@ TEXTS = {
 
         "premium_expire_3days": "⏳ Твій преміум закінчиться через 3 дні.",
         "premium_expired": "⚠️ Твій преміум завершився. Профіль знову став базовим.",
-    },
-    "ru": {},
-    "en": {},
-    "de": {},
-    "fr": {},
-    "it": {},
-    "es": {},
-    "fi": {},
-}
 
-for code in ["ru", "en", "de", "fr", "it", "es", "fi"]:
-    if not TEXTS[code]:
-        TEXTS[code] = dict(TEXTS["ua"])
+        "confirm_btn": "✅ Підтвердити",
+        "edit_btn": "✏️ Редагувати",
+        "request_confirm_text": "Перевір дані заявки перед відправкою:",
+        "choose_valid_subject": "Будь ласка, обери предмет кнопкою зі списку.",
+        "categories_title": "📚 Обери категорію предмета:",
+        "tutor_subject_title": "Вибери предмет з якого тобі потрібен репетитор:",
+        "enter_name": "Введи своє ім'я:",
+        "enter_phone": "Введи свій номер телефону для зв'язку:",
+        "ask_level": "Вкажи свій рівень або клас:",
+        "ask_goal": "Напиши коротко свою ціль або проблему:",
+        "ask_time": "Напиши зручний час для занять:",
+        "ask_format": "Вкажи формат: онлайн / офлайн:",
+        "tutor_request_sent": "✅ Заявку відправлено адміністратору. З тобою зв'яжуться.",
+        "tutor_request_header": "📚 Нова заявка на репетитора",
+        "tutor_subject": "Предмет",
+        "tutor_name": "Ім'я",
+        "tutor_phone": "Телефон",
+        "phone_invalid": "❌ Будь ласка, введи коректний номер телефону або натисни кнопку.",
+    },
+    "ru": {
+        "language_text": "👋 Выберите язык бота",
+        "main_menu_hint": "👋 Выберите действие",
+        "task": "Выполнить задание🙏",
+        "tutor": "Нужен репетитор💪",
+        "my_requests_btn": "📂 Мои заявки",
+        "support_btn": "🆘 Поддержка",
+        "menu_btn": "📋 Меню",
+        "back": "⬅️ Назад",
+
+        "one": "Одно задание",
+        "complex": "Комплексное выполнение работы",
+        "premium_profile": "Премиум профиль",
+        "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
+        "pay_premium_profile_btn": "Оплатить премиум профиль (2500⭐)",
+        "choose_service": "👇 Выберите услугу",
+
+        "file_sent": "📩 Файл отправлен администратору.",
+        "no_payment": "❌ Сначала нужно оплатить.",
+        "send_file_now": "📎 Теперь можешь отправить файл.",
+        "pay_success_task": "✅ Оплата 200⭐ прошла успешно.",
+        "pay_success_complex": "✅ Оплата 600⭐ прошла успешно.",
+        "pay_success_premium_profile": "✅ Оплата 2500⭐ за премиум профиль прошла успешно.",
+        "premium_profile_activated": "💎 Премиум профиль активирован на 30 дней.",
+
+        "system_menu_title": "📋 Меню",
+        "my_profile_btn": "👤 Моя анкета",
+        "premium_menu_btn": "⭐ Premium профиль",
+        "admin_login_btn": "🔐 Вход администратора",
+
+        "profile_title": "👤 Моя анкета",
+        "profile_role": "Тип профиля",
+        "profile_language": "Язык бота",
+        "profile_status": "Статус",
+        "profile_until": "Премиум активен до",
+        "profile_user": "Пользователь",
+        "profile_admin": "Администратор",
+        "profile_basic": "Базовый профиль",
+        "profile_premium": "Премиум профиль",
+        "payments_history_title": "💳 История оплат",
+        "orders_history_title": "📦 История заявок",
+        "no_payments_history": "История оплат пока пуста.",
+        "no_requests": "У тебя ещё нет заявок.",
+        "change_language_btn": "🌍 Изменить язык",
+
+        "complain_text": "🆘 Напиши свой вопрос одним сообщением, и администратор его получит.",
+        "complaint_sent": "✅ Сообщение отправлено администратору.",
+        "complaint_header": "🆘 Новое сообщение",
+        "complaint_user_id": "ID пользователя",
+        "complaint_username": "Username",
+        "complaint_language": "Язык",
+        "complaint_profile": "Профиль",
+        "complaint_text_label": "Текст",
+
+        "support_text": "🆘 Напиши свой вопрос одним сообщением, и администратор его получит.",
+        "support_sent": "✅ Сообщение отправлено администратору.",
+
+        "ask_admin_login": "Введите логин администратора:",
+        "ask_admin_password": "Введите пароль администратора:",
+        "admin_login_success": "✅ Вход администратора успешный.",
+        "admin_login_fail": "❌ Неверный логин или пароль.",
+        "admin_panel_title": "🛠 Админ-панель",
+        "admin_new_requests_btn": "📥 Новые заявки",
+        "admin_premium_users_btn": "💎 Премиум-пользователи",
+        "admin_search_btn": "🔎 Поиск",
+        "admin_reply_btn": "💬 Ответить клиенту",
+        "admin_no_new_requests": "Нет новых заявок.",
+        "admin_no_premium_users": "Нет активных премиум-пользователей.",
+        "admin_search_prompt": "Введите ID пользователя:",
+        "admin_reply_prompt": "Введите ID пользователя, которому хотите ответить:",
+        "admin_reply_text_prompt": "Введите текст ответа для пользователя:",
+        "admin_reply_sent": "✅ Сообщение пользователю отправлено.",
+
+        "request_status_new": "Новая",
+        "request_status_accepted": "Принята",
+        "request_status_in_progress": "В работе",
+        "request_status_done": "Завершена",
+
+        "premium_expire_3days": "⏳ Твой премиум закончится через 3 дня.",
+        "premium_expired": "⚠️ Твой премиум завершился. Профиль снова стал базовым.",
+
+        "confirm_btn": "✅ Подтвердить",
+        "edit_btn": "✏️ Редактировать",
+        "request_confirm_text": "Проверь данные заявки перед отправкой:",
+        "choose_valid_subject": "Пожалуйста, выбери предмет кнопкой из списка.",
+        "categories_title": "📚 Выбери категорию предмета:",
+        "tutor_subject_title": "Выбери предмет, по которому тебе нужен репетитор:",
+        "enter_name": "Введи своё имя:",
+        "enter_phone": "Введи свой номер телефона для связи:",
+        "ask_level": "Укажи свой уровень или класс:",
+        "ask_goal": "Напиши кратко свою цель или проблему:",
+        "ask_time": "Напиши удобное время для занятий:",
+        "ask_format": "Укажи формат: онлайн / офлайн:",
+        "tutor_request_sent": "✅ Заявка отправлена администратору. С тобой свяжутся.",
+        "tutor_request_header": "📚 Новая заявка на репетитора",
+        "tutor_subject": "Предмет",
+        "tutor_name": "Имя",
+        "tutor_phone": "Телефон",
+        "phone_invalid": "❌ Пожалуйста, введи корректный номер телефона или нажми кнопку.",
+    },
+}
 
 
 def db():
@@ -264,26 +363,9 @@ def get_user(user_id: int):
 def detect_language_code(language_code: str):
     if not language_code:
         return "ua"
-
     code = language_code.lower()
-
-    if code.startswith("uk"):
-        return "ua"
     if code.startswith("ru"):
         return "ru"
-    if code.startswith("en"):
-        return "en"
-    if code.startswith("de"):
-        return "de"
-    if code.startswith("fr"):
-        return "fr"
-    if code.startswith("it"):
-        return "it"
-    if code.startswith("es"):
-        return "es"
-    if code.startswith("fi"):
-        return "fi"
-
     return "ua"
 
 
@@ -318,6 +400,7 @@ def resolve_user_language(message: types.Message):
 
 
 def add_admin(user_id: int):
+    ensure_user(user_id)
     conn = db()
     cur = conn.cursor()
     cur.execute("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (user_id,))
@@ -329,7 +412,6 @@ def add_admin(user_id: int):
 def remove_admin(user_id: int):
     if user_id == OWNER_ID:
         return
-
     conn = db()
     cur = conn.cursor()
     cur.execute("DELETE FROM admins WHERE user_id = ?", (user_id,))
@@ -348,7 +430,6 @@ def get_admins():
     ids = [row[0] for row in rows]
     if OWNER_ID not in ids:
         ids.append(OWNER_ID)
-
     return ids
 
 
@@ -414,7 +495,6 @@ def get_pending_payment(user_id: int):
 def activate_premium(user_id: int, days: int = 30):
     ensure_user(user_id)
     premium_until = datetime.now(timezone.utc) + timedelta(days=days)
-
     conn = db()
     cur = conn.cursor()
     cur.execute("""
@@ -461,10 +541,8 @@ def is_premium(user_id: int):
 def premium_until_text(user_id: int):
     clear_premium_if_expired(user_id)
     premium_until = get_user(user_id)["premium_until"]
-
     if not premium_until:
         return None
-
     dt = datetime.fromisoformat(premium_until)
     return dt.strftime("%Y-%m-%d %H:%M UTC")
 
@@ -554,7 +632,6 @@ def get_premium_users():
 def search_user_by_id(user_id: int):
     conn = db()
     cur = conn.cursor()
-
     cur.execute("SELECT user_id, language, is_admin, premium_until FROM users WHERE user_id = ?", (user_id,))
     user = cur.fetchone()
 
@@ -604,7 +681,7 @@ async def check_premium_reminders():
         if timedelta(days=2, hours=23) <= delta <= timedelta(days=3, hours=1):
             if not remind_3days_sent:
                 try:
-                    await bot.send_message(user_id, TEXTS.get(language, TEXTS["ua"])["premium_expire_3days"])
+                    await bot.send_message(user_id, TEXTS[language]["premium_expire_3days"])
                     conn = db()
                     cur = conn.cursor()
                     cur.execute("UPDATE users SET premium_remind_3days_sent = 1 WHERE user_id = ?", (user_id,))
@@ -616,7 +693,7 @@ async def check_premium_reminders():
         if dt <= now:
             if not expired_sent:
                 try:
-                    await bot.send_message(user_id, TEXTS.get(language, TEXTS["ua"])["premium_expired"])
+                    await bot.send_message(user_id, TEXTS[language]["premium_expired"])
                     conn = db()
                     cur = conn.cursor()
                     cur.execute("UPDATE users SET premium_expired_sent = 1 WHERE user_id = ?", (user_id,))
@@ -684,9 +761,9 @@ def back_menu(lang: str = "ua"):
 
 def system_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["admin_login_btn"])
     kb.row(TEXTS[lang]["my_profile_btn"])
     kb.row(TEXTS[lang]["premium_menu_btn"])
+    kb.row(TEXTS[lang]["admin_login_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -708,57 +785,9 @@ def admin_menu(lang: str = "ua"):
     return kb
 
 SUBJECT_CATEGORIES = {
-    "🌍 Мови": [
-        "Англійська", "Іспанська", "Французька", "Німецька", "Японська", "Італійська",
-        "Корейська", "Арабська", "Китайська (Путунхуа)", "Португальська", "Російська",
-        "Польська", "Турецька", "Українська", "Голландська", "Вірменська", "Норвезька",
-        "Шведська", "Фінська", "Угорська", "Грузинська", "Іврит", "Хінді", "Чеська",
-        "Грецька", "Телугу", "Кхмерська", "Білоруська", "Жестова", "Латинь", "Санскрит",
-        "Урду", "Сербська", "Датська", "Тибетська", "Литовська", "Словацька",
-        "В'єтнамська", "Тамільська", "Тагальська", "Румунська", "Ірландська",
-        "Ісландська", "Перська (фарсі)", "Хорватська", "Каталанська", "Болгарська",
-        "Бенгалі", "Панджабі", "Тайська", "Малаяламська", "Албанська", "Пушту",
-        "Гавайська", "Есперанто", "Монгольська", "Сомалійська", "Словенська",
-        "Казахська", "Тамазігхтська", "Кантонська мова", "Курдська", "Кіньяруанда",
-        "Узбецька", "Маорі", "Ігбо", "Сингальська", "Бірманська", "Лаоська",
-        "Йоруба", "Амхарська", "Суахілі", "Африкаанс", "Коса", "Македонська",
-        "Люксембурзька", "Кечуа", "Азербайджанська", "Валлійська", "Каннада",
-        "Гуджараті", "Мальтійська", "Креольська", "Ідиш", "Боснійська", "Естонська",
-        "Луганда", "Кебуанська", "Баскська", "Кічуа", "Кримськотатарська",
-        "Індонезійська", "Малайська"
-    ],
-    "🔬 Точні науки": [
-        "Хімія", "Математика", "Статистика", "Економіка", "Біологія",
-        "Алгебра", "Фізика", "Географія"
-    ],
-    "💻 IT і програмування": [
-        "Інформатика", "Go language", "Rust", "Scala", "HTML", "XML", "CSS",
-        "JavaScript", "NodeJS", "Python", "PHP", "Ruby", "Bash", "Java", "C",
-        "Swift", "Objective C", "C++", "C#", "R", "Data Science",
-        "Штучний інтелект", "Веб розробка", "Веб аналітика",
-        "Розробка додатків iOS", "Розробка додатків Android", "Бази даних",
-        "Алгоритми", "SEO", "UX/UI", "Управління IT проектами"
-    ],
-    "💼 Бізнес, маркетинг і фінанси": [
-        "Бухгалтерський облік", "Корпоративне фінансування", "Бізнес аналітика",
-        "Бізнес стратегія", "Управління продуктом", "PR", "Міжнародний бізнес",
-        "Маркетингові стратегії", "Контент маркетинг", "Бізнес і управління",
-        "SMM", "Копірайтинг", "Email маркетинг", "PPC", "Бізнес моделювання",
-        "Продажі", "Юридична справа"
-    ],
-    "📚 Гуманітарні науки": [
-        "Історія", "Література", "Філософія", "Письмо", "Тести", "Конкурсний іспит"
-    ],
-    "🎨 Мистецтво і креатив": [
-        "Мистецтво", "Музика", "Акторська майстерність", "Живопис", "Фотографія",
-        "Motion design", "Video post-production", "3D дизайн", "Графічний дизайн",
-        "Ораторське мистецтво"
-    ],
-    "👥 Суспільні науки": [
-        "Соціологія", "Суспільствознавство", "Психологія"
-    ],
-    "🎮 Інше": [
-        "Dota 2"
+    "📚 Предмети": [
+        "Математика",
+        "Англійська",
     ],
 }
 
@@ -766,9 +795,6 @@ SUBJECT_CATEGORIES = {
 def get_language_keyboard(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row("🇺🇦 Українська", "🇷🇺 Русский")
-    kb.row("🇬🇧 English", "🇩🇪 Deutsch")
-    kb.row("🇫🇷 Français", "🇮🇹 Italiano")
-    kb.row("🇪🇸 Español", "🇫🇮 Suomi")
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -817,32 +843,16 @@ def get_phone_menu(lang: str = "ua"):
 
 def get_request_confirm_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"]) if "confirm_btn" in TEXTS[lang] else kb.row("✅ Підтвердити", "✏️ Редагувати")
+    kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
-# fallback keys for older dictionaries
-for _lang in TEXTS.values():
-    _lang.setdefault("confirm_btn", "✅ Підтвердити")
-    _lang.setdefault("edit_btn", "✏️ Редагувати")
-    _lang.setdefault("share_phone_btn", "📱 Поділитися номером")
-    _lang.setdefault("request_confirm_text", "Перевір дані заявки перед відправкою:")
-    _lang.setdefault("choose_valid_subject", "Будь ласка, обери предмет кнопкою зі списку.")
-    _lang.setdefault("categories_title", "📚 Обери категорію предмета:")
-    _lang.setdefault("tutor_subject_title", "Вибери предмет з якого тобі потрібен репетитор зі списку:")
-    _lang.setdefault("enter_name", "Введи своє ім'я:")
-    _lang.setdefault("enter_phone", "Введи свій номер телефону для зв'язку:")
-    _lang.setdefault("ask_level", "Вкажи свій рівень або клас:")
-    _lang.setdefault("ask_goal", "Напиши коротко свою ціль або проблему:")
-    _lang.setdefault("ask_time", "Напиши зручний час для занять:")
-    _lang.setdefault("ask_format", "Вкажи формат: онлайн / офлайн:")
-    _lang.setdefault("tutor_request_sent", "✅ Заявку відправлено адміністраторам. З тобою зв'яжуться.")
-    _lang.setdefault("tutor_request_header", "📚 Нова заявка на репетитора")
-    _lang.setdefault("tutor_subject", "Предмет")
-    _lang.setdefault("tutor_name", "Ім'я")
-    _lang.setdefault("tutor_phone", "Телефон")
-    _lang.setdefault("phone_invalid", "❌ Будь ласка, введи коректний номер телефону або натисни кнопку.")
+def profile_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["change_language_btn"])
+    kb.row(TEXTS[lang]["back"])
+    return kb
 
 
 @dp.message_handler(commands=["start"])
@@ -857,7 +867,7 @@ async def start(message: types.Message):
 async def cmd_myprofile(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "profile_screen"
-    await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=back_menu(lang))
+    await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
 
 
 @dp.message_handler(commands=["premium"])
@@ -874,14 +884,14 @@ async def cmd_premium(message: types.Message):
 async def cmd_complaint(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "complaint_wait"
-    await message.answer(TEXTS[lang]["complain_text"], reply_markup=back_menu(lang))
+    await message.answer(TEXTS[lang]["support_text"], reply_markup=back_menu(lang))
 
 
 @dp.message_handler(commands=["language"])
 async def cmd_language(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "language_menu"
-    await message.answer(TEXTS[lang]["language_text"] if "language_text" in TEXTS[lang] else "👋 Вибери мову бота", reply_markup=get_language_keyboard(lang))
+    await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
 
 
 @dp.message_handler(commands=["admin"])
@@ -1031,25 +1041,6 @@ async def menu(message: types.Message):
 
         user_state[message.from_user.id] = "main"
         await message.answer(TEXTS[lang]["complaint_sent"], reply_markup=main_menu(lang))
-        return
-
-    if state == "support_wait":
-        support_text = (
-            f"🆘 Повідомлення в підтримку\n"
-            f"ID: {message.from_user.id}\n"
-        )
-        if message.from_user.username:
-            support_text += f"Username: @{message.from_user.username}\n"
-        support_text += f"\n{text}"
-
-        for admin_id in get_admins():
-            try:
-                await bot.send_message(admin_id, support_text)
-            except Exception as e:
-                logging.warning(f"Failed to send support message to admin {admin_id}: {e}")
-
-        user_state[message.from_user.id] = "main"
-        await message.answer(TEXTS[lang]["support_sent"], reply_markup=main_menu(lang))
         return
 
     if state == "tutor_category_wait":
@@ -1300,7 +1291,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
             return
 
-        lines = [TEXTS[lang]["my_requests_title"] + ":"]
+        lines = [TEXTS[lang]["orders_history_title"] + ":"]
         for request_id, subject, status_code, created_at in requests:
             lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
 
@@ -1308,7 +1299,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["support_btn"]:
-        user_state[message.from_user.id] = "support_wait"
+        user_state[message.from_user.id] = "complaint_wait"
         await message.answer(TEXTS[lang]["support_text"], reply_markup=back_menu(lang))
         return
 
@@ -1317,19 +1308,24 @@ async def menu(message: types.Message):
         await message.answer(TEXTS[lang]["system_menu_title"], reply_markup=system_menu(lang))
         return
 
-    if text == TEXTS[lang]["admin_login_btn"]:
-        user_state[message.from_user.id] = "admin_login_wait"
-        await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
-        return
-
     if text == TEXTS[lang]["my_profile_btn"]:
         user_state[message.from_user.id] = "profile_screen"
-        await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=back_menu(lang))
+        await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
     if text == TEXTS[lang]["premium_menu_btn"]:
         user_state[message.from_user.id] = "premium_profile_screen"
         await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_login_btn"]:
+        user_state[message.from_user.id] = "admin_login_wait"
+        await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["change_language_btn"]:
+        user_state[message.from_user.id] = "language_menu"
+        await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
         return
 
     if text == TEXTS[lang]["one"]:
@@ -1435,11 +1431,26 @@ async def menu(message: types.Message):
 
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
+@dp.message_handler(content_types=types.ContentType.CONTACT)
+async def handle_contact(message: types.Message):
+    lang = resolve_user_language(message)
+
+    if user_state.get(message.from_user.id) != "tutor_phone_wait":
+        return
+
+    phone = message.contact.phone_number
+    user_temp.setdefault(message.from_user.id, {})
+    user_temp[message.from_user.id]["phone"] = phone
+    user_state[message.from_user.id] = "tutor_level_wait"
+
+    await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
+
+
 async def set_bot_commands():
     commands = [
         BotCommand("myprofile", "Моя анкета"),
         BotCommand("premium", "Premium профіль"),
-        BotCommand("complaint", "Поскаржитися"),
+        BotCommand("complaint", "Підтримка / скарга"),
         BotCommand("language", "Змінити мову"),
         BotCommand("admin", "Вхід адміністратора"),
     ]
