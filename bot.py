@@ -67,6 +67,7 @@ TEXTS = {
         "premium_profile": "Преміум профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "pay_premium_profile_btn": "Оплатити преміум профіль (2500⭐)",
+        "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
 
         "file_sent": "📩 Файл відправлено адміністратору.",
@@ -81,6 +82,8 @@ TEXTS = {
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профіль",
         "admin_login_btn": "🔐 Вхід адміністратора",
+        "admin_logout_btn": "🚪 Вийти з адмін-профілю",
+        "admin_logout_success": "✅ Ти вийшов з адмін-профілю.",
 
         "profile_title": "👤 Моя анкета",
         "profile_role": "Тип профілю",
@@ -167,6 +170,7 @@ TEXTS = {
         "premium_profile": "Премиум профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
         "pay_premium_profile_btn": "Оплатить премиум профиль (2500⭐)",
+        "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
 
         "file_sent": "📩 Файл отправлен администратору.",
@@ -181,6 +185,8 @@ TEXTS = {
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профиль",
         "admin_login_btn": "🔐 Вход администратора",
+        "admin_logout_btn": "🚪 Выйти из админ-профиля",
+        "admin_logout_success": "✅ Ты вышел из админ-профиля.",
 
         "profile_title": "👤 Моя анкета",
         "profile_role": "Тип профиля",
@@ -431,6 +437,10 @@ def get_admins():
     if OWNER_ID not in ids:
         ids.append(OWNER_ID)
     return ids
+
+
+def is_admin_user(user_id: int):
+    return user_id in get_admins()
 
 
 def add_payment(user_id: int, payment_type: str, amount: int):
@@ -705,7 +715,7 @@ async def check_premium_reminders():
 
 def build_profile_text(user_id: int, lang: str):
     user = get_user(user_id)
-    role = TEXTS[lang]["profile_admin"] if user_id in get_admins() or user["is_admin"] else TEXTS[lang]["profile_user"]
+    role = TEXTS[lang]["profile_admin"] if is_admin_user(user_id) or user["is_admin"] else TEXTS[lang]["profile_user"]
     status = get_profile_status_text(user_id, lang)
     language_name = LANG_NAMES.get(user["language"], user["language"])
 
@@ -759,11 +769,13 @@ def back_menu(lang: str = "ua"):
     return kb
 
 
-def system_menu(lang: str = "ua"):
+def system_menu(lang: str = "ua", is_admin: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["my_profile_btn"])
     kb.row(TEXTS[lang]["premium_menu_btn"])
     kb.row(TEXTS[lang]["admin_login_btn"])
+    if is_admin:
+        kb.row(TEXTS[lang]["admin_logout_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -771,6 +783,14 @@ def system_menu(lang: str = "ua"):
 def premium_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["pay_premium_profile_btn"])
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def profile_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["change_language_btn"])
+    kb.row(TEXTS[lang]["profile_upgrade_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -848,13 +868,6 @@ def get_request_confirm_menu(lang: str = "ua"):
     return kb
 
 
-def profile_menu(lang: str = "ua"):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["change_language_btn"])
-    kb.row(TEXTS[lang]["back"])
-    return kb
-
-
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
     ensure_user(message.from_user.id)
@@ -874,10 +887,7 @@ async def cmd_myprofile(message: types.Message):
 async def cmd_premium(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "premium_profile_screen"
-    await message.answer(
-        TEXTS[lang]["premium_profile_info"],
-        reply_markup=premium_menu(lang)
-    )
+    await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
 
 
 @dp.message_handler(commands=["complaint"])
@@ -1061,10 +1071,7 @@ async def menu(message: types.Message):
         valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
 
         if text not in valid_subjects:
-            await message.answer(
-                TEXTS[lang]["choose_valid_subject"],
-                reply_markup=get_tutor_subjects_menu(selected_category, lang)
-            )
+            await message.answer(TEXTS[lang]["choose_valid_subject"], reply_markup=get_tutor_subjects_menu(selected_category, lang))
             return
 
         user_temp.setdefault(message.from_user.id, {})
@@ -1305,7 +1312,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["menu_btn"]:
         user_state[message.from_user.id] = "system_menu"
-        await message.answer(TEXTS[lang]["system_menu_title"], reply_markup=system_menu(lang))
+        await message.answer(TEXTS[lang]["system_menu_title"], reply_markup=system_menu(lang, is_admin=is_admin_user(message.from_user.id)))
         return
 
     if text == TEXTS[lang]["my_profile_btn"]:
@@ -1323,9 +1330,20 @@ async def menu(message: types.Message):
         await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
         return
 
+    if text == TEXTS[lang]["admin_logout_btn"]:
+        remove_admin(message.from_user.id)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["admin_logout_success"], reply_markup=main_menu(lang))
+        return
+
     if text == TEXTS[lang]["change_language_btn"]:
         user_state[message.from_user.id] = "language_menu"
         await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
+        return
+
+    if text == TEXTS[lang]["profile_upgrade_btn"]:
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
         return
 
     if text == TEXTS[lang]["one"]:
@@ -1372,7 +1390,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["admin_new_requests_btn"]:
-        if message.from_user.id not in get_admins():
+        if not is_admin_user(message.from_user.id):
             await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
             return
 
@@ -1389,7 +1407,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["admin_premium_users_btn"]:
-        if message.from_user.id not in get_admins():
+        if not is_admin_user(message.from_user.id):
             await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
             return
 
@@ -1406,7 +1424,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["admin_search_btn"]:
-        if message.from_user.id not in get_admins():
+        if not is_admin_user(message.from_user.id):
             await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
             return
 
@@ -1415,7 +1433,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["admin_reply_btn"]:
-        if message.from_user.id not in get_admins():
+        if not is_admin_user(message.from_user.id):
             await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
             return
 
@@ -1424,7 +1442,7 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["admin_panel_title"]:
-        if message.from_user.id in get_admins():
+        if is_admin_user(message.from_user.id):
             user_state[message.from_user.id] = "admin_panel"
             await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
             return
@@ -1471,3 +1489,4 @@ async def on_startup(_):
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+
