@@ -39,6 +39,29 @@ dp = Dispatcher(bot)
 user_state = {}
 user_temp = {}
 
+def db():
+    return sqlite3.connect(DB_PATH)
+
+
+def column_exists(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    return column_name in columns
+
+
+def normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+
+    value = phone.strip()
+    has_plus = value.startswith("+")
+    digits = re.sub(r"\D", "", value)
+
+    if not digits:
+        return ""
+
+    return f"+{digits}" if has_plus else digits
+
 REQUEST_STATUS_NEW = "new"
 REQUEST_STATUS_ACCEPTED = "accepted"
 REQUEST_STATUS_IN_PROGRESS = "in_progress"
