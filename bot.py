@@ -381,6 +381,53 @@ def get_telegram_full_name(user: types.User | None) -> str:
     return full_name or (user.username or "")
 
 
+def db():
+    return sqlite3.connect(DB_PATH)
+
+
+def column_exists(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    return column_name in columns
+
+
+def normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    value = phone.strip()
+    has_plus = value.startswith("+")
+    digits = re.sub(r"\D", "", value)
+    if not digits:
+        return ""
+    return f"+{digits}" if has_plus else digits
+
+
+def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
+    balance = get_tutor_balance(tutor_user_id)
+    target = 1000
+    remaining = max(0, target - balance)
+    return balance, target, remaining
+
+
+def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
+    return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
+
+
+def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
+    return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
+
+
+def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, remaining = get_tutor_withdraw_progress(tutor_user_id)
+    if remaining > 0:
+        if lang == "ua":
+            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
+    if lang == "ua":
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
+    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
+
 def init_db():
     conn = db()
     cur = conn.cursor()
@@ -811,36 +858,6 @@ def get_tutor_balance(tutor_user_id: int) -> int:
     row = cur.fetchone()
     conn.close()
     return int(row[0]) if row else 0
-
-
-def get_tutor_withdraw_goal() -> int:
-    return 1000
-
-
-def get_tutor_remaining_to_withdraw(tutor_user_id: int) -> int:
-    balance = get_tutor_balance(tutor_user_id)
-    return max(0, get_tutor_withdraw_goal() - balance)
-
-
-def get_tutor_withdraw_button_text(user_id: int, lang: str) -> str:
-    balance = get_tutor_balance(user_id)
-    return f"💸 {balance}/{get_tutor_withdraw_goal()}⭐"
-
-
-def build_tutor_balance_status_text(user_id: int, lang: str) -> str:
-    balance = get_tutor_balance(user_id)
-    remaining = get_tutor_remaining_to_withdraw(user_id)
-
-    if remaining > 0:
-        return (
-            f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\n"
-            f"До виведення потрібно ще: {remaining}⭐"
-        )
-
-    return (
-        f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\n"
-        f"Виведення коштів уже доступне."
-    )
 
 
 def add_tutor_balance(tutor_user_id: int, amount_stars: int, request_id: int | None = None, note: str = ""):
@@ -1417,12 +1434,19 @@ def build_tutor_panel_text(user_id: int, lang: str):
     tutor_profile = get_tutor_profile(user_id)
     user = get_user(user_id)
     display_name = tutor_profile["full_name"] if tutor_profile else (user.get("full_name") or f"user_{user_id}")
+    balance = get_tutor_balance(user_id)
+
+    if balance >= 1000:
+        withdraw_status = TEXTS[lang]["tutor_panel_withdraw_status_ready"]
+    else:
+        withdraw_status = TEXTS[lang]["tutor_panel_withdraw_status_wait"].format(remaining=1000 - balance)
 
     lines = [
         TEXTS[lang]["tutor_panel_title"],
         "",
         f"{TEXTS[lang]['tutor_panel_name']}: {display_name}",
-        build_tutor_balance_status_text(user_id, lang),
+        f"{TEXTS[lang]['tutor_panel_balance']}: {balance}⭐",
+        withdraw_status,
     ]
     return "\n".join(lines)
 
@@ -2515,7 +2539,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
             return
 
-    if text == TEXTS[lang]["tutor_withdraw_btn"] or text.startswith("💸 "):
+    if is_tutor_withdraw_button_text(text, message.from_user.id, lang):
         if not is_tutor_user(message.from_user.id):
             await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
@@ -2544,11 +2568,9 @@ async def menu(message: types.Message):
             return
 
         rows = get_unassigned_tutor_requests()
-        balance_info = build_tutor_balance_status_text(message.from_user.id, lang)
-
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{balance_info}",
+                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
@@ -2571,10 +2593,10 @@ async def menu(message: types.Message):
                 f"{TEXTS[lang]['format_label']}: {lesson_format or '-'}\n"
                 f"Payment: {payment_info}\n"
                 f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}\n"
-                f"Created: {created_at[:16]}\n\n"
-                f"{balance_info}"
+                f"Created: {created_at[:16]}"
             )
             await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
+        await message.answer(build_tutor_balance_info_text(message.from_user.id, lang), reply_markup=tutor_menu(message.from_user.id, lang))
         return
 
     if text == TEXTS[lang]["tutor_my_requests_btn"]:
@@ -2583,17 +2605,15 @@ async def menu(message: types.Message):
             return
 
         rows = get_tutor_assigned_requests(message.from_user.id)
-        balance_info = build_tutor_balance_status_text(message.from_user.id, lang)
-
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{balance_info}",
+                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
 
         await message.answer(
-            f"{TEXTS[lang]['tutor_my_requests_btn']}:\n\n{balance_info}",
+            TEXTS[lang]["tutor_my_requests_btn"] + ":\n\n" + build_tutor_balance_info_text(message.from_user.id, lang),
             reply_markup=build_tutor_requests_keyboard(rows, lang)
         )
         return
