@@ -2004,6 +2004,22 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
+    if text == TEXTS[lang]["premium_menu_btn"]:
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
+        return
+
     if text == TEXTS[lang]["my_requests_btn"] and not is_tutor_user(message.from_user.id):
         user_temp.pop(message.from_user.id, None)
         requests = get_user_requests(message.from_user.id)
