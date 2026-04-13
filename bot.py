@@ -2459,7 +2459,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["admin_no_premium_users"], reply_markup=admin_menu(lang))
             return
 
-        lines = [TEXTS[lang]["admin_premium_users_btn"]
+        lines = [TEXTS[lang]["admin_premium_users_btn"] + ":"]
 
         lines = [TEXTS[lang]["admin_premium_users_btn"] + ":"]
         for user_id, premium_until in rows[:50]:
