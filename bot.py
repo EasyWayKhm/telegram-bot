@@ -2714,6 +2714,7 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
+    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
