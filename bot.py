@@ -35,7 +35,6 @@ dp = Dispatcher(bot)
 
 user_state = {}
 user_temp = {}
-user_history = {}
 
 REQUEST_STATUS_NEW = "new"
 REQUEST_STATUS_ACCEPTED = "accepted"
@@ -61,7 +60,7 @@ TEXTS = {
         "my_requests_btn": "📂 Мої заявки",
         "support_btn": "🆘 Підтримка",
         "menu_btn": "📋 Меню",
-        "back": "⬅️ Назад",
+        "back": "🏠 Початкове меню",
 
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
@@ -179,7 +178,7 @@ TEXTS = {
         "my_requests_btn": "📂 Мои заявки",
         "support_btn": "🆘 Поддержка",
         "menu_btn": "📋 Меню",
-        "back": "⬅️ Назад",
+        "back": "🏠 Главное меню",
 
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
@@ -903,198 +902,46 @@ def get_request_confirm_menu(lang: str = "ua"):
     return kb
 
 
-def push_history(user_id: int, state: str):
-    user_history.setdefault(user_id, [])
-
-    if not user_history[user_id] or user_history[user_id][-1] != state:
-        user_history[user_id].append(state)
-
-    if len(user_history[user_id]) > 30:
-        user_history[user_id] = user_history[user_id][-30:]
-
-
-def set_state(user_id: int, new_state: str, save_current: bool = True):
-    current_state = user_state.get(user_id, "main")
-
-    if save_current and current_state != new_state:
-        push_history(user_id, current_state)
-
-    user_state[user_id] = new_state
-
-
-async def render_state(message: types.Message, lang: str, state: str):
-    user_id = message.from_user.id
-    is_admin = is_admin_user(user_id)
-
-    if state == "main":
-        await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
-        return
-
-    if state == "system_menu":
-        await message.answer(
-            TEXTS[lang]["system_menu_title"],
-            reply_markup=system_menu(lang, is_admin=is_admin)
-        )
-        return
-
-    if state == "profile_screen":
-        await message.answer(build_profile_text(user_id, lang), reply_markup=profile_menu(lang))
-        return
-
-    if state == "premium_profile_screen":
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-        return
-
-    if state == "language_menu":
-        await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
-        return
-
-    if state == "task_menu":
-        await message.answer(TEXTS[lang]["choose_service"], reply_markup=get_task_menu(lang))
-        return
-
-    if state == "complaint_wait":
-        await message.answer(TEXTS[lang]["support_text"], reply_markup=back_menu(lang))
-        return
-
-    if state == "admin_panel":
-        await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
-        return
-
-    if state == "admin_login_wait":
-        await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
-        return
-
-    if state == "admin_password_wait":
-        await message.answer(TEXTS[lang]["ask_admin_password"], reply_markup=back_menu(lang))
-        return
-
-    if state == "admin_search_wait":
-        await message.answer(TEXTS[lang]["admin_search_prompt"], reply_markup=back_menu(lang))
-        return
-
-    if state == "admin_reply_user_wait":
-        await message.answer(TEXTS[lang]["admin_reply_prompt"], reply_markup=back_menu(lang))
-        return
-
-    if state == "admin_reply_text_wait":
-        await message.answer(TEXTS[lang]["admin_reply_text_prompt"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_category_wait":
-        await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
-        return
-
-    if state == "tutor_subject_wait":
-        category = user_temp.get(user_id, {}).get("category", "")
-        await message.answer(
-            TEXTS[lang]["tutor_subject_title"],
-            reply_markup=get_tutor_subjects_menu(category, lang)
-        )
-        return
-
-    if state == "tutor_name_wait":
-        await message.answer(TEXTS[lang]["enter_name"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_phone_wait":
-        await message.answer(TEXTS[lang]["enter_phone"], reply_markup=get_phone_menu(lang))
-        return
-
-    if state == "tutor_level_wait":
-        await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_goal_wait":
-        await message.answer(TEXTS[lang]["ask_goal"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_time_wait":
-        await message.answer(TEXTS[lang]["ask_time"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_format_wait":
-        await message.answer(TEXTS[lang]["ask_format"], reply_markup=back_menu(lang))
-        return
-
-    if state == "tutor_confirm_wait":
-        d = user_temp.get(user_id, {})
-        confirm_text = (
-            f"{TEXTS[lang]['request_confirm_text']}\n\n"
-            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
-            f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
-            f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}\n"
-            f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}\n"
-            f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}\n"
-            f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}\n"
-            f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}\n"
-            f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}"
-        )
-        await message.answer(confirm_text, reply_markup=get_request_confirm_menu(lang))
-        return
-
-    if state == "awaiting_file":
-        await message.answer(TEXTS[lang]["send_file_now"], reply_markup=back_menu(lang))
-        return
-
-    await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
-
-
-async def go_back(message: types.Message, lang: str):
-    user_id = message.from_user.id
-    history = user_history.get(user_id, [])
-
-    if not history:
-        user_state[user_id] = "main"
-        await render_state(message, lang, "main")
-        return
-
-    previous_state = history.pop()
-    user_state[user_id] = previous_state
-    await render_state(message, lang, previous_state)
-
-
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
     ensure_user(message.from_user.id)
     lang = resolve_user_language(message)
-    user_history[message.from_user.id] = []
-    set_state(message.from_user.id, "main", save_current=False)
+    user_state[message.from_user.id] = "main"
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
 
 @dp.message_handler(commands=["myprofile"])
 async def cmd_myprofile(message: types.Message):
     lang = resolve_user_language(message)
-    set_state(message.from_user.id, "profile_screen")
+    user_state[message.from_user.id] = "profile_screen"
     await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
 
 
 @dp.message_handler(commands=["premium"])
 async def cmd_premium(message: types.Message):
     lang = resolve_user_language(message)
-    set_state(message.from_user.id, "premium_profile_screen")
+    user_state[message.from_user.id] = "premium_profile_screen"
     await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
 
 
 @dp.message_handler(commands=["complaint"])
 async def cmd_complaint(message: types.Message):
     lang = resolve_user_language(message)
-    set_state(message.from_user.id, "complaint_wait")
+    user_state[message.from_user.id] = "complaint_wait"
     await message.answer(TEXTS[lang]["support_text"], reply_markup=back_menu(lang))
 
 
 @dp.message_handler(commands=["language"])
 async def cmd_language(message: types.Message):
     lang = resolve_user_language(message)
-    set_state(message.from_user.id, "language_menu")
+    user_state[message.from_user.id] = "language_menu"
     await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
 
 
 @dp.message_handler(commands=["admin"])
 async def cmd_admin(message: types.Message):
     lang = resolve_user_language(message)
-    set_state(message.from_user.id, "admin_login_wait")
+    user_state[message.from_user.id] = "admin_login_wait"
     await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
 
 
@@ -1102,7 +949,7 @@ async def cmd_admin(message: types.Message):
 async def set_language(message: types.Message):
     lang = LANG_BUTTONS[message.text]
     set_user_language(message.from_user.id, lang, manual=True)
-    set_state(message.from_user.id, "main", save_current=False)
+    user_state[message.from_user.id] = "main"
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
 
@@ -1119,7 +966,7 @@ async def successful_payment(message: types.Message):
     if payload == "task_payment":
         set_pending_payment(message.from_user.id, "task")
         add_payment(message.from_user.id, "Одне завдання", 200)
-        set_state(message.from_user.id, "awaiting_file")
+        user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_task']}\n\n{TEXTS[lang]['send_file_now']}",
             reply_markup=back_menu(lang)
@@ -1128,7 +975,7 @@ async def successful_payment(message: types.Message):
     elif payload == "complex_payment":
         set_pending_payment(message.from_user.id, "complex")
         add_payment(message.from_user.id, "Комплексне виконання роботи", 600)
-        set_state(message.from_user.id, "awaiting_file")
+        user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_complex']}\n\n{TEXTS[lang]['send_file_now']}",
             reply_markup=back_menu(lang)
@@ -1137,7 +984,7 @@ async def successful_payment(message: types.Message):
     elif payload == "premium_profile_payment":
         activate_premium(message.from_user.id, days=30)
         add_payment(message.from_user.id, "Преміум профіль", 2500)
-        set_state(message.from_user.id, "main", save_current=False)
+        user_state[message.from_user.id] = "main"
         await message.answer(
             f"{TEXTS[lang]['pay_success_premium_profile']}\n\n{TEXTS[lang]['premium_profile_activated']}",
             reply_markup=main_menu(lang)
@@ -1171,4 +1018,525 @@ async def handle_document(message: types.Message):
 
     await message.answer(TEXTS[lang]["file_sent"], reply_markup=main_menu(lang))
     clear_pending_payment(message.from_user.id)
-    set_state(message.from_user.id, "main", save_current=False)
+    user_state[message.from_user.id] = "main"
+
+
+@dp.message_handler(content_types=types.ContentType.TEXT)
+async def menu(message: types.Message):
+    lang = resolve_user_language(message)
+    state = user_state.get(message.from_user.id, "main")
+    text = message.text
+
+    if text == TEXTS[lang]["back"]:
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+        return
+
+    if state == "admin_login_wait":
+        user_temp[message.from_user.id] = {"admin_login": text.strip()}
+        user_state[message.from_user.id] = "admin_password_wait"
+        await message.answer(TEXTS[lang]["ask_admin_password"], reply_markup=back_menu(lang))
+        return
+
+    if state == "admin_password_wait":
+        login_value = user_temp.get(message.from_user.id, {}).get("admin_login", "")
+        password_value = text.strip()
+
+        if login_value == ADMIN_LOGIN and password_value == ADMIN_PASSWORD:
+            add_admin(message.from_user.id)
+            user_state[message.from_user.id] = "admin_panel"
+            await message.answer(TEXTS[lang]["admin_login_success"], reply_markup=admin_menu(lang))
+        else:
+            user_state[message.from_user.id] = "main"
+            await message.answer(TEXTS[lang]["admin_login_fail"], reply_markup=main_menu(lang))
+
+        user_temp.pop(message.from_user.id, None)
+        return
+
+    if state == "complaint_wait":
+        user = get_user(message.from_user.id)
+        profile_status = get_profile_status_text(message.from_user.id, lang)
+        language_name = LANG_NAMES.get(user["language"], user["language"])
+
+        lines = [
+            TEXTS[lang]["complaint_header"],
+            f"{TEXTS[lang]['complaint_user_id']}: {message.from_user.id}",
+            f"{TEXTS[lang]['complaint_language']}: {language_name}",
+            f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
+        ]
+
+        if message.from_user.username:
+            lines.append(f"{TEXTS[lang]['complaint_username']}: @{message.from_user.username}")
+
+        premium_until = premium_until_text(message.from_user.id)
+        if premium_until:
+            lines.append(f"{TEXTS[lang]['profile_until']}: {premium_until}")
+
+        lines.append("")
+        lines.append(f"{TEXTS[lang]['complaint_text_label']}:")
+        lines.append(text)
+
+        complaint_text = "\n".join(lines)
+
+        for admin_id in get_admins():
+            try:
+                await bot.send_message(admin_id, complaint_text)
+            except Exception as e:
+                logging.warning(f"Failed to send complaint to admin {admin_id}: {e}")
+
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["complaint_sent"], reply_markup=main_menu(lang))
+        return
+
+    if state == "tutor_category_wait":
+        if text not in SUBJECT_CATEGORIES:
+            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+            return
+
+        user_temp[message.from_user.id] = {"category": text}
+        user_state[message.from_user.id] = "tutor_subject_wait"
+        await message.answer(
+            TEXTS[lang]["tutor_subject_title"],
+            reply_markup=get_tutor_subjects_menu(text, lang)
+        )
+        return
+
+    if state == "tutor_subject_wait":
+        selected_category = user_temp.get(message.from_user.id, {}).get("category")
+        valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
+
+        if text not in valid_subjects:
+            await message.answer(
+                TEXTS[lang]["choose_valid_subject"],
+                reply_markup=get_tutor_subjects_menu(selected_category, lang)
+            )
+            return
+
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["subject"] = text
+        user_state[message.from_user.id] = "tutor_name_wait"
+        await message.answer(TEXTS[lang]["enter_name"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_name_wait":
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["name"] = text.strip()
+        user_state[message.from_user.id] = "tutor_phone_wait"
+        await message.answer(TEXTS[lang]["enter_phone"], reply_markup=get_phone_menu(lang))
+        return
+
+    if state == "tutor_phone_wait":
+        phone = text.strip()
+        if len(phone) < 6:
+            await message.answer(TEXTS[lang]["phone_invalid"], reply_markup=get_phone_menu(lang))
+            return
+
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["phone"] = phone
+        user_state[message.from_user.id] = "tutor_level_wait"
+        await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_level_wait":
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["level"] = text.strip()
+        user_state[message.from_user.id] = "tutor_goal_wait"
+        await message.answer(TEXTS[lang]["ask_goal"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_goal_wait":
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["goal"] = text.strip()
+        user_state[message.from_user.id] = "tutor_time_wait"
+        await message.answer(TEXTS[lang]["ask_time"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_time_wait":
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["preferred_time"] = text.strip()
+        user_state[message.from_user.id] = "tutor_format_wait"
+        await message.answer(TEXTS[lang]["ask_format"], reply_markup=back_menu(lang))
+        return
+
+    if state == "tutor_format_wait":
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["lesson_format"] = text.strip()
+        user_state[message.from_user.id] = "tutor_confirm_wait"
+
+        d = user_temp[message.from_user.id]
+        confirm_text = (
+            f"{TEXTS[lang]['request_confirm_text']}\n\n"
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
+            f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
+            f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}\n"
+            f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}\n"
+            f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}\n"
+            f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}\n"
+            f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}\n"
+            f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}"
+        )
+
+        await message.answer(confirm_text, reply_markup=get_request_confirm_menu(lang))
+        return
+
+    if state == "tutor_confirm_wait":
+        if text == TEXTS[lang]["edit_btn"]:
+            user_state[message.from_user.id] = "tutor_name_wait"
+            await message.answer(TEXTS[lang]["enter_name"], reply_markup=back_menu(lang))
+            return
+
+        if text != TEXTS[lang]["confirm_btn"]:
+            await message.answer(TEXTS[lang]["request_confirm_text"], reply_markup=get_request_confirm_menu(lang))
+            return
+
+        d = user_temp.get(message.from_user.id, {})
+        request_id = save_tutor_request(
+            user_id=message.from_user.id,
+            category=d.get("category", ""),
+            subject=d.get("subject", ""),
+            client_name=d.get("name", ""),
+            phone=d.get("phone", ""),
+            level=d.get("level", ""),
+            goal=d.get("goal", ""),
+            preferred_time=d.get("preferred_time", ""),
+            lesson_format=d.get("lesson_format", "")
+        )
+
+        user = get_user(message.from_user.id)
+        language_name = LANG_NAMES.get(user["language"], user["language"])
+        profile_status = get_profile_status_text(message.from_user.id, lang)
+
+        admin_lines = [
+            f"{TEXTS[lang]['tutor_request_header']} #{request_id}",
+            f"{TEXTS[lang]['complaint_user_id']}: {message.from_user.id}",
+            f"{TEXTS[lang]['complaint_language']}: {language_name}",
+            f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}",
+            f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}",
+            f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}",
+            f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}",
+            f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}",
+            f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}",
+            f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}",
+            f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}",
+            f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}",
+        ]
+
+        if message.from_user.username:
+            admin_lines.append(f"{TEXTS[lang]['complaint_username']}: @{message.from_user.username}")
+
+        premium_until = premium_until_text(message.from_user.id)
+        if premium_until:
+            admin_lines.append(f"{TEXTS[lang]['profile_until']}: {premium_until}")
+
+        admin_text = "\n".join(admin_lines)
+
+        for admin_id in get_admins():
+            try:
+                await bot.send_message(admin_id, admin_text)
+            except Exception as e:
+                logging.warning(f"Failed to send tutor request to admin {admin_id}: {e}")
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["tutor_request_sent"], reply_markup=main_menu(lang))
+        return
+
+    if state == "admin_search_wait":
+        if not text.isdigit():
+            await message.answer(TEXTS[lang]["admin_search_prompt"], reply_markup=back_menu(lang))
+            return
+
+        target_user_id = int(text)
+        user_row, requests, payments = search_user_by_id(target_user_id)
+
+        if not user_row:
+            await message.answer(TEXTS[lang]["user_not_found"], reply_markup=admin_menu(lang))
+            user_state[message.from_user.id] = "admin_panel"
+            return
+
+        _, user_language, is_admin_flag, premium_until = user_row
+        role = TEXTS[lang]["profile_admin"] if is_admin_flag else TEXTS[lang]["profile_user"]
+        status = TEXTS[lang]["profile_premium"] if premium_until else TEXTS[lang]["profile_basic"]
+
+        lines = [
+            f"{TEXTS[lang]['user_search_title']} {target_user_id}",
+            f"{TEXTS[lang]['profile_role']}: {role}",
+            f"{TEXTS[lang]['profile_language']}: {LANG_NAMES.get(user_language, user_language)}",
+            f"{TEXTS[lang]['profile_status']}: {status}",
+        ]
+
+        if premium_until:
+            lines.append(f"{TEXTS[lang]['profile_until']}: {premium_until[:16]}")
+
+        lines.append("")
+        lines.append(TEXTS[lang]["orders_history_title"] + ":")
+
+        if requests:
+            for subject, status_code, created_at in requests:
+                lines.append(f"• {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
+        else:
+            lines.append(TEXTS[lang]["no_requests"])
+
+        lines.append("")
+        lines.append(TEXTS[lang]["payments_history_title"] + ":")
+
+        if payments:
+            for payment_type, amount_stars, created_at in payments:
+                lines.append(f"• {payment_type} | {amount_stars}⭐ | {created_at[:16]}")
+        else:
+            lines.append(TEXTS[lang]["no_payments_history"])
+
+        await message.answer("\n".join(lines), reply_markup=admin_menu(lang))
+        user_state[message.from_user.id] = "admin_panel"
+        return
+
+    if state == "admin_reply_user_wait":
+        if not text.isdigit():
+            await message.answer(TEXTS[lang]["admin_reply_prompt"], reply_markup=back_menu(lang))
+            return
+
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["reply_user_id"] = int(text)
+        user_state[message.from_user.id] = "admin_reply_text_wait"
+        await message.answer(TEXTS[lang]["admin_reply_text_prompt"], reply_markup=back_menu(lang))
+        return
+
+    if state == "admin_reply_text_wait":
+        reply_user_id = user_temp.get(message.from_user.id, {}).get("reply_user_id")
+        if not reply_user_id:
+            user_state[message.from_user.id] = "admin_panel"
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=admin_menu(lang))
+            return
+
+        try:
+            await bot.send_message(reply_user_id, f"{TEXTS[lang]['admin_message_prefix']}{text}")
+            await message.answer(TEXTS[lang]["admin_reply_sent"], reply_markup=admin_menu(lang))
+        except Exception as e:
+            await message.answer(f"❌ Не вдалося відправити повідомлення: {e}", reply_markup=admin_menu(lang))
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "admin_panel"
+        return
+
+    if text == TEXTS[lang]["task"]:
+        user_state[message.from_user.id] = "task_menu"
+        await message.answer(TEXTS[lang]["choose_service"], reply_markup=get_task_menu(lang))
+        return
+
+    if text == TEXTS[lang]["tutor"]:
+        user_state[message.from_user.id] = "tutor_category_wait"
+        user_temp[message.from_user.id] = {}
+        await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+        return
+
+    if text == TEXTS[lang]["my_requests_btn"]:
+        requests = get_user_requests(message.from_user.id)
+        if not requests:
+            await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
+            return
+
+        lines = [TEXTS[lang]["orders_history_title"] + ":"]
+        for request_id, subject, status_code, created_at in requests:
+            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
+
+        await message.answer("\n".join(lines), reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["support_btn"]:
+        user_state[message.from_user.id] = "complaint_wait"
+        await message.answer(TEXTS[lang]["support_text"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["menu_btn"]:
+        user_state[message.from_user.id] = "system_menu"
+        await message.answer(
+            TEXTS[lang]["system_menu_title"],
+            reply_markup=system_menu(lang, is_admin=is_admin_user(message.from_user.id))
+        )
+        return
+
+    if text == TEXTS[lang]["my_profile_btn"]:
+        user_state[message.from_user.id] = "profile_screen"
+        await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
+        return
+
+    if text == TEXTS[lang]["premium_menu_btn"]:
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_login_btn"]:
+        user_state[message.from_user.id] = "admin_login_wait"
+        await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_profile_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_panel"
+        await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_logout_btn"]:
+        remove_admin(message.from_user.id)
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["admin_logout_success"], reply_markup=main_menu(lang))
+        return
+
+    if text == TEXTS[lang]["change_language_btn"]:
+        user_state[message.from_user.id] = "language_menu"
+        await message.answer(TEXTS[lang]["language_text"], reply_markup=get_language_keyboard(lang))
+        return
+
+    if text == TEXTS[lang]["profile_upgrade_btn"]:
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        return
+
+    if text == TEXTS[lang]["one"]:
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Task Payment",
+            description="Single task",
+            payload="task_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Task", amount=200)],
+            start_parameter="task"
+        )
+        return
+
+    if text == TEXTS[lang]["complex"]:
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Complex Payment",
+            description="Complex work",
+            payload="complex_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Complex", amount=600)],
+            start_parameter="complex"
+        )
+        return
+
+    if text == TEXTS[lang]["premium_profile"] or text == TEXTS[lang]["pay_premium_profile_btn"]:
+        if text == TEXTS[lang]["premium_profile"]:
+            await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+            return
+
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
+        return
+
+    if text == TEXTS[lang]["admin_new_requests_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        rows = get_new_requests()
+        if not rows:
+            await message.answer(TEXTS[lang]["admin_no_new_requests"], reply_markup=admin_menu(lang))
+            return
+
+        lines = [TEXTS[lang]["admin_new_requests_btn"] + ":"]
+        for request_id, user_id, subject, client_name, phone, created_at in rows[:20]:
+            lines.append(f"• #{request_id} | user {user_id} | {subject} | {client_name} | {phone} | {created_at[:16]}")
+
+        await message.answer("\n".join(lines), reply_markup=admin_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_premium_users_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        rows = get_premium_users()
+        if not rows:
+            await message.answer(TEXTS[lang]["admin_no_premium_users"], reply_markup=admin_menu(lang))
+            return
+
+        lines = [TEXTS[lang]["admin_premium_users_btn"] + ":"]
+        for user_id, premium_until in rows[:50]:
+            lines.append(f"• {user_id} — {premium_until[:16]}")
+
+        await message.answer("\n".join(lines), reply_markup=admin_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_search_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_search_wait"
+        await message.answer(TEXTS[lang]["admin_search_prompt"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_reply_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_reply_user_wait"
+        await message.answer(TEXTS[lang]["admin_reply_prompt"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_panel_title"]:
+        if is_admin_user(message.from_user.id):
+            user_state[message.from_user.id] = "admin_panel"
+            await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
+            return
+
+    await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+
+
+@dp.message_handler(content_types=types.ContentType.CONTACT)
+async def handle_contact(message: types.Message):
+    lang = resolve_user_language(message)
+
+    if user_state.get(message.from_user.id) != "tutor_phone_wait":
+        return
+
+    phone = message.contact.phone_number
+    user_temp.setdefault(message.from_user.id, {})
+    user_temp[message.from_user.id]["phone"] = phone
+    user_state[message.from_user.id] = "tutor_level_wait"
+
+    await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
+
+
+async def set_bot_commands():
+    commands = [
+        BotCommand("myprofile", "Моя анкета"),
+        BotCommand("premium", "Premium профіль"),
+        BotCommand("complaint", "Підтримка / скарга"),
+        BotCommand("language", "Змінити мову"),
+        BotCommand("admin", "Вхід адміністратора"),
+    ]
+    await bot.set_my_commands(commands)
+
+
+async def on_startup(_):
+    init_db()
+    ensure_user(OWNER_ID)
+    add_admin(OWNER_ID)
+    await set_bot_commands()
+
+    try:
+        await check_premium_reminders()
+    except Exception as e:
+        logging.warning(f"Помилка перевірки premium reminders: {e}")
+
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
