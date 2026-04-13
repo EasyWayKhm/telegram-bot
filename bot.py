@@ -66,15 +66,14 @@ TEXTS = {
         "complex": "Комплексне виконання роботи",
         "premium_profile": "Преміум профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
-        "pay_premium_profile_btn": "Оплатити преміум профіль (2500⭐)",
         "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
 
         "file_sent": "📩 Файл відправлено адміністратору.",
         "no_payment": "❌ Спочатку потрібно оплатити.",
         "send_file_now": "📎 Тепер можеш надіслати файл.",
-        "pay_success_task": "✅ Оплата 200⭐ пройшла успішно.",
-        "pay_success_complex": "✅ Оплата 600⭐ пройшла успішно.",
+        "pay_success_task": "✅ Оплата 250⭐ пройшла успішно.",
+        "pay_success_complex": "✅ Оплата 500⭐ пройшла успішно.",
         "pay_success_premium_profile": "✅ Оплата 2500⭐ за преміум профіль пройшла успішно.",
         "premium_profile_activated": "💎 Преміум профіль активовано на 30 днів.",
 
@@ -184,15 +183,14 @@ TEXTS = {
         "complex": "Комплексное выполнение работы",
         "premium_profile": "Премиум профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
-        "pay_premium_profile_btn": "Оплатить премиум профиль (2500⭐)",
         "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
 
         "file_sent": "📩 Файл отправлен администратору.",
         "no_payment": "❌ Сначала нужно оплатить.",
         "send_file_now": "📎 Теперь можешь отправить файл.",
-        "pay_success_task": "✅ Оплата 200⭐ прошла успешно.",
-        "pay_success_complex": "✅ Оплата 600⭐ прошла успешно.",
+        "pay_success_task": "✅ Оплата 250⭐ прошла успешно.",
+        "pay_success_complex": "✅ Оплата 500⭐ прошла успешно.",
         "pay_success_premium_profile": "✅ Оплата 2500⭐ за премиум профиль прошла успешно.",
         "premium_profile_activated": "💎 Премиум профиль активирован на 30 дней.",
 
@@ -815,7 +813,6 @@ def system_menu(lang: str = "ua", is_admin: bool = False):
 
 def premium_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["pay_premium_profile_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -922,6 +919,16 @@ async def cmd_premium(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "premium_profile_screen"
     await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+    await bot.send_invoice(
+        chat_id=message.chat.id,
+        title="Premium Profile Payment",
+        description="Unlimited tasks for one month",
+        payload="premium_profile_payment",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+        start_parameter="premium_profile"
+    )
 
 
 @dp.message_handler(commands=["complaint"])
@@ -965,7 +972,7 @@ async def successful_payment(message: types.Message):
 
     if payload == "task_payment":
         set_pending_payment(message.from_user.id, "task")
-        add_payment(message.from_user.id, "Одне завдання", 200)
+        add_payment(message.from_user.id, "Одне завдання", 250)
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_task']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -974,7 +981,7 @@ async def successful_payment(message: types.Message):
 
     elif payload == "complex_payment":
         set_pending_payment(message.from_user.id, "complex")
-        add_payment(message.from_user.id, "Комплексне виконання роботи", 600)
+        add_payment(message.from_user.id, "Комплексне виконання роботи", 500)
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_complex']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -1364,6 +1371,16 @@ async def menu(message: types.Message):
     if text == TEXTS[lang]["premium_menu_btn"]:
         user_state[message.from_user.id] = "premium_profile_screen"
         await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["admin_login_btn"]:
@@ -1394,6 +1411,16 @@ async def menu(message: types.Message):
     if text == TEXTS[lang]["profile_upgrade_btn"]:
         user_state[message.from_user.id] = "premium_profile_screen"
         await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["one"]:
@@ -1404,7 +1431,7 @@ async def menu(message: types.Message):
             payload="task_payment",
             provider_token="",
             currency="XTR",
-            prices=[LabeledPrice(label="Task", amount=200)],
+            prices=[LabeledPrice(label="Task", amount=250)],
             start_parameter="task"
         )
         return
@@ -1417,16 +1444,14 @@ async def menu(message: types.Message):
             payload="complex_payment",
             provider_token="",
             currency="XTR",
-            prices=[LabeledPrice(label="Complex", amount=600)],
+            prices=[LabeledPrice(label="Complex", amount=500)],
             start_parameter="complex"
         )
         return
 
-    if text == TEXTS[lang]["premium_profile"] or text == TEXTS[lang]["pay_premium_profile_btn"]:
-        if text == TEXTS[lang]["premium_profile"]:
-            await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-            return
-
+    if text == TEXTS[lang]["premium_profile"]:
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="Premium Profile Payment",
