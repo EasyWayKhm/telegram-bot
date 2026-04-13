@@ -625,15 +625,6 @@ def is_admin_user(user_id: int):
     return user_id in get_admins()
 
 
-def login_tutor(user_id: int):
-    ensure_user(user_id)
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("UPDATE users SET is_tutor = 1 WHERE user_id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-
-
 def logout_tutor(user_id: int):
     conn = db()
     cur = conn.cursor()
@@ -761,10 +752,7 @@ def get_tutor_balance(tutor_user_id: int) -> int:
     ensure_tutor_balance(tutor_user_id)
     conn = db()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT balance_stars FROM tutor_balances WHERE tutor_user_id = ?",
-        (tutor_user_id,)
-    )
+    cur.execute("SELECT balance_stars FROM tutor_balances WHERE tutor_user_id = ?", (tutor_user_id,))
     row = cur.fetchone()
     conn.close()
     return int(row[0]) if row else 0
@@ -877,7 +865,6 @@ def activate_premium(user_id: int, days: int = 30):
 def clear_pending_payment(user_id: int):
     set_pending_payment(user_id, None)
 
-
 def clear_premium_if_expired(user_id: int):
     user = get_user(user_id)
     premium_until = user["premium_until"]
@@ -928,6 +915,18 @@ def get_request_status_text(status: str, lang: str):
     return status
 
 
+def get_payment_amount_for_type(payment_type: str) -> int:
+    if payment_type == "task":
+        return 250
+    if payment_type == "complex":
+        return 500
+    return 0
+
+
+def get_tutor_reward_for_payment_amount(amount_stars: int) -> int:
+    return int(amount_stars * 0.5)
+
+
 def save_tutor_request(
     user_id: int,
     category: str,
@@ -937,7 +936,9 @@ def save_tutor_request(
     level: str = "",
     goal: str = "",
     preferred_time: str = "",
-    lesson_format: str = ""
+    lesson_format: str = "",
+    payment_type: str = "",
+    payment_amount_stars: int = 0
 ):
     conn = db()
     cur = conn.cursor()
@@ -945,10 +946,11 @@ def save_tutor_request(
         INSERT INTO tutor_requests (
             user_id, category, subject, client_name, phone,
             level, goal, preferred_time, lesson_format, status,
-            created_at, assigned_tutor_id, payment_type,
-            payment_amount_stars, payment_awarded_to_tutor, paid_at
+            admin_reply, created_at, assigned_tutor_id,
+            payment_type, payment_amount_stars,
+            payment_awarded_to_tutor, paid_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, 0, NULL)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, ?, ?, 0, ?)
     """, (
         user_id,
         category,
@@ -960,7 +962,10 @@ def save_tutor_request(
         preferred_time,
         lesson_format,
         REQUEST_STATUS_NEW,
-        datetime.now(timezone.utc).isoformat()
+        datetime.now(timezone.utc).isoformat(),
+        payment_type,
+        payment_amount_stars,
+        datetime.now(timezone.utc).isoformat() if payment_amount_stars > 0 else None
     ))
     request_id = cur.lastrowid
     conn.commit()
@@ -986,9 +991,12 @@ def get_unassigned_tutor_requests():
     conn = db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, created_at, payment_type, payment_amount_stars
+        SELECT id, user_id, category, subject, client_name, phone, level, goal,
+               preferred_time, lesson_format, created_at, payment_type, payment_amount_stars
         FROM tutor_requests
-        WHERE status = ? AND assigned_tutor_id IS NULL
+        WHERE status = ?
+          AND assigned_tutor_id IS NULL
+          AND payment_amount_stars > 0
         ORDER BY id DESC
     """, (REQUEST_STATUS_NEW,))
     rows = cur.fetchall()
@@ -1000,7 +1008,8 @@ def get_tutor_assigned_requests(tutor_user_id: int):
     conn = db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, status, created_at
+        SELECT id, user_id, category, subject, client_name, phone, level, goal,
+               preferred_time, lesson_format, status, created_at
         FROM tutor_requests
         WHERE assigned_tutor_id = ?
         ORDER BY id DESC
@@ -1047,45 +1056,6 @@ def get_request_by_id(request_id: int):
     }
 
 
-def get_latest_unpaid_request_for_user(user_id: int):
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("""
-        SELECT id
-        FROM tutor_requests
-        WHERE user_id = ?
-          AND (payment_type IS NULL OR payment_type = '')
-        ORDER BY id DESC
-        LIMIT 1
-    """, (user_id,))
-    row = cur.fetchone()
-    conn.close()
-    if not row:
-        return None
-    return row[0]
-
-
-def attach_payment_to_request(request_id: int, payment_type: str, amount_stars: int):
-    conn = db()
-    cur = conn.cursor()
-    cur.execute("""
-        UPDATE tutor_requests
-        SET payment_type = ?, payment_amount_stars = ?, paid_at = ?
-        WHERE id = ?
-    """, (
-        payment_type,
-        amount_stars,
-        datetime.now(timezone.utc).isoformat(),
-        request_id
-    ))
-    conn.commit()
-    conn.close()
-
-
-def get_tutor_reward_for_payment_amount(amount_stars: int) -> int:
-    return int(amount_stars * 0.5)
-
-
 def try_award_tutor_for_request(request_id: int):
     request_data = get_request_by_id(request_id)
     if not request_data:
@@ -1127,7 +1097,7 @@ def assign_request_to_tutor(request_id: int, tutor_user_id: int) -> bool:
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT status, assigned_tutor_id
+        SELECT status, assigned_tutor_id, payment_amount_stars
         FROM tutor_requests
         WHERE id = ?
     """, (request_id,))
@@ -1137,8 +1107,8 @@ def assign_request_to_tutor(request_id: int, tutor_user_id: int) -> bool:
         conn.close()
         return False
 
-    status, assigned_tutor_id = row
-    if assigned_tutor_id is not None or status != REQUEST_STATUS_NEW:
+    status, assigned_tutor_id, payment_amount_stars = row
+    if assigned_tutor_id is not None or status != REQUEST_STATUS_NEW or (payment_amount_stars or 0) <= 0:
         conn.close()
         return False
 
@@ -1557,7 +1527,7 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
 async def take_request_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = get_user(callback_query.from_user.id)["language"] or "ua"
+    lang = get_user(user_id)["language"] or "ua"
 
     if not is_tutor_user(user_id):
         await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
@@ -1584,7 +1554,7 @@ async def take_request_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("open_tutor_request:"))
 async def open_tutor_request_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = get_user(callback_query.from_user.id)["language"] or "ua"
+    lang = get_user(user_id)["language"] or "ua"
 
     if not is_tutor_user(user_id):
         await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
@@ -1602,7 +1572,7 @@ async def open_tutor_request_callback(callback_query: types.CallbackQuery):
     lines.append(TEXTS[lang]["request_files_title"] + ":")
 
     if files:
-        for _, sender_user_id, sender_role, _, file_name, created_at in files:
+        for _, _, sender_role, _, file_name, created_at in files:
             sender_text = "user" if sender_role == "user" else "tutor"
             lines.append(f"• {file_name or 'file'} | {sender_text} | {created_at[:16]}")
     else:
@@ -1619,7 +1589,7 @@ async def open_tutor_request_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_msg_user:"))
 async def tutor_msg_user_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = get_user(callback_query.from_user.id)["language"] or "ua"
+    lang = get_user(user_id)["language"] or "ua"
 
     if not is_tutor_user(user_id):
         await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
@@ -1644,7 +1614,7 @@ async def tutor_msg_user_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_file_user:"))
 async def tutor_file_user_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = get_user(callback_query.from_user.id)["language"] or "ua"
+    lang = get_user(user_id)["language"] or "ua"
 
     if not is_tutor_user(user_id):
         await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
@@ -1740,12 +1710,6 @@ async def successful_payment(message: types.Message):
     if payload == "task_payment":
         set_pending_payment(message.from_user.id, "task")
         add_payment(message.from_user.id, "Одне завдання", 250)
-
-        latest_request_id = get_latest_unpaid_request_for_user(message.from_user.id)
-        if latest_request_id:
-            attach_payment_to_request(latest_request_id, "task", 250)
-            try_award_tutor_for_request(latest_request_id)
-
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_task']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -1756,12 +1720,6 @@ async def successful_payment(message: types.Message):
     if payload == "complex_payment":
         set_pending_payment(message.from_user.id, "complex")
         add_payment(message.from_user.id, "Комплексне виконання роботи", 500)
-
-        latest_request_id = get_latest_unpaid_request_for_user(message.from_user.id)
-        if latest_request_id:
-            attach_payment_to_request(latest_request_id, "complex", 500)
-            try_award_tutor_for_request(latest_request_id)
-
         user_state[message.from_user.id] = "awaiting_file"
         await message.answer(
             f"{TEXTS[lang]['pay_success_complex']}\n\n{TEXTS[lang]['send_file_now']}",
@@ -2128,6 +2086,14 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["request_confirm_text"], reply_markup=get_request_confirm_menu(lang))
             return
 
+        payment_type = get_pending_payment(message.from_user.id)
+        if payment_type not in {"task", "complex"}:
+            user_state[message.from_user.id] = "main"
+            await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
+            return
+
+        payment_amount = get_payment_amount_for_type(payment_type)
+
         d = user_temp.get(message.from_user.id, {})
         request_id = save_tutor_request(
             user_id=message.from_user.id,
@@ -2138,8 +2104,12 @@ async def menu(message: types.Message):
             level=d.get("level", ""),
             goal=d.get("goal", ""),
             preferred_time=d.get("preferred_time", ""),
-            lesson_format=d.get("lesson_format", "")
+            lesson_format=d.get("lesson_format", ""),
+            payment_type=payment_type,
+            payment_amount_stars=payment_amount
         )
+
+        clear_pending_payment(message.from_user.id)
 
         user = get_user(message.from_user.id)
         language_name = LANG_NAMES.get(user["language"], user["language"])
@@ -2158,6 +2128,7 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}",
             f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}",
             f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}",
+            f"Payment: {payment_type} | {payment_amount}⭐",
             f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}",
         ]
 
@@ -2271,6 +2242,11 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
+        payment_type = get_pending_payment(message.from_user.id)
+        if payment_type not in {"task", "complex"}:
+            await message.answer(TEXTS[lang]["no_payment"], reply_markup=main_menu(lang))
+            return
+
         user_state[message.from_user.id] = "tutor_category_wait"
         user_temp[message.from_user.id] = {}
         await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
@@ -2471,10 +2447,7 @@ async def menu(message: types.Message):
                 f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}\n"
                 f"Created: {created_at[:16]}"
             )
-            await message.answer(
-                request_text,
-                reply_markup=build_take_request_keyboard(request_id, lang)
-            )
+            await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
         return
 
     if text == TEXTS[lang]["tutor_my_requests_btn"]:
