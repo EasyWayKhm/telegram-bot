@@ -82,6 +82,7 @@ TEXTS = {
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профіль",
         "admin_login_btn": "🔐 Вхід адміністратора",
+        "admin_profile_btn": "🛠 Admin профіль",
         "admin_logout_btn": "🚪 Вийти з адмін-профілю",
         "admin_logout_success": "✅ Ти вийшов з адмін-профілю.",
 
@@ -154,6 +155,20 @@ TEXTS = {
         "tutor_name": "Ім'я",
         "tutor_phone": "Телефон",
         "phone_invalid": "❌ Будь ласка, введи коректний номер телефону або натисни кнопку.",
+        "no_access": "⛔ Немає доступу.",
+        "user_not_found": "Користувача не знайдено.",
+        "error_try_again": "Помилка. Спробуй ще раз.",
+        "admin_message_prefix": "💬 Повідомлення від адміністратора:\n\n",
+        "new_order_prefix": "📥 New order",
+        "user_id_label": "User ID",
+        "username_label": "Username",
+        "category_label": "Категорія",
+        "level_label": "Рівень / клас",
+        "goal_label": "Ціль / проблема",
+        "preferred_time_label": "Зручний час",
+        "format_label": "Формат",
+        "status_label": "Статус",
+        "user_search_title": "🔎 Користувач",
     },
     "ru": {
         "language_text": "👋 Выберите язык бота",
@@ -185,6 +200,7 @@ TEXTS = {
         "my_profile_btn": "👤 Моя анкета",
         "premium_menu_btn": "⭐ Premium профиль",
         "admin_login_btn": "🔐 Вход администратора",
+        "admin_profile_btn": "🛠 Admin профиль",
         "admin_logout_btn": "🚪 Выйти из админ-профиля",
         "admin_logout_success": "✅ Ты вышел из админ-профиля.",
 
@@ -257,6 +273,20 @@ TEXTS = {
         "tutor_name": "Имя",
         "tutor_phone": "Телефон",
         "phone_invalid": "❌ Пожалуйста, введи корректный номер телефона или нажми кнопку.",
+        "no_access": "⛔ Немає доступу.",
+        "user_not_found": "Пользователь не найден.",
+        "error_try_again": "Ошибка. Попробуй ещё раз.",
+        "admin_message_prefix": "💬 Сообщение от администратора:\n\n",
+        "new_order_prefix": "📥 New order",
+        "user_id_label": "User ID",
+        "username_label": "Username",
+        "category_label": "Категория",
+        "level_label": "Уровень / класс",
+        "goal_label": "Цель / проблема",
+        "preferred_time_label": "Удобное время",
+        "format_label": "Формат",
+        "status_label": "Статус",
+        "user_search_title": "🔎 Пользователь",
     },
 }
 
@@ -610,7 +640,6 @@ def save_tutor_request(
     conn.close()
     return request_id
 
-
 def get_new_requests():
     conn = db()
     cur = conn.cursor()
@@ -772,10 +801,14 @@ def back_menu(lang: str = "ua"):
 def system_menu(lang: str = "ua", is_admin: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["my_profile_btn"])
-    kb.row(TEXTS[lang]["premium_menu_btn"])
-    kb.row(TEXTS[lang]["admin_login_btn"])
+
     if is_admin:
+        kb.row(TEXTS[lang]["admin_profile_btn"])
         kb.row(TEXTS[lang]["admin_logout_btn"])
+    else:
+        kb.row(TEXTS[lang]["premium_menu_btn"])
+        kb.row(TEXTS[lang]["admin_login_btn"])
+
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -803,6 +836,7 @@ def admin_menu(lang: str = "ua"):
     kb.row(TEXTS[lang]["admin_reply_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
+
 
 SUBJECT_CATEGORIES = {
     "📚 Предмети": [
@@ -967,12 +1001,12 @@ async def handle_document(message: types.Message):
         return
 
     caption_lines = [
-        f"📥 New order: {pending_payment}",
-        f"User ID: {message.from_user.id}",
+        f"{TEXTS[lang]['new_order_prefix']}: {pending_payment}",
+        f"{TEXTS[lang]['user_id_label']}: {message.from_user.id}",
     ]
 
     if message.from_user.username:
-        caption_lines.append(f"Username: @{message.from_user.username}")
+        caption_lines.append(f"{TEXTS[lang]['username_label']}: @{message.from_user.username}")
 
     caption = "\n".join(caption_lines)
 
@@ -985,6 +1019,7 @@ async def handle_document(message: types.Message):
     await message.answer(TEXTS[lang]["file_sent"], reply_markup=main_menu(lang))
     clear_pending_payment(message.from_user.id)
     user_state[message.from_user.id] = "main"
+
 
 @dp.message_handler(content_types=types.ContentType.TEXT)
 async def menu(message: types.Message):
@@ -1071,7 +1106,10 @@ async def menu(message: types.Message):
         valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
 
         if text not in valid_subjects:
-            await message.answer(TEXTS[lang]["choose_valid_subject"], reply_markup=get_tutor_subjects_menu(selected_category, lang))
+            await message.answer(
+                TEXTS[lang]["choose_valid_subject"],
+                reply_markup=get_tutor_subjects_menu(selected_category, lang)
+            )
             return
 
         user_temp.setdefault(message.from_user.id, {})
@@ -1128,14 +1166,14 @@ async def menu(message: types.Message):
         d = user_temp[message.from_user.id]
         confirm_text = (
             f"{TEXTS[lang]['request_confirm_text']}\n\n"
-            f"Категорія: {d.get('category', '-')}\n"
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
             f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}\n"
             f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}\n"
-            f"Рівень / клас: {d.get('level', '-')}\n"
-            f"Ціль / проблема: {d.get('goal', '-')}\n"
-            f"Зручний час: {d.get('preferred_time', '-')}\n"
-            f"Формат: {d.get('lesson_format', '-')}"
+            f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}\n"
+            f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}\n"
+            f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}\n"
+            f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}"
         )
 
         await message.answer(confirm_text, reply_markup=get_request_confirm_menu(lang))
@@ -1173,15 +1211,15 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['complaint_user_id']}: {message.from_user.id}",
             f"{TEXTS[lang]['complaint_language']}: {language_name}",
             f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
-            f"Категорія: {d.get('category', '-')}",
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}",
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}",
             f"{TEXTS[lang]['tutor_name']}: {d.get('name', '-')}",
             f"{TEXTS[lang]['tutor_phone']}: {d.get('phone', '-')}",
-            f"Рівень / клас: {d.get('level', '-')}",
-            f"Ціль / проблема: {d.get('goal', '-')}",
-            f"Зручний час: {d.get('preferred_time', '-')}",
-            f"Формат: {d.get('lesson_format', '-')}",
-            f"Статус: {TEXTS[lang]['request_status_new']}",
+            f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}",
+            f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}",
+            f"{TEXTS[lang]['preferred_time_label']}: {d.get('preferred_time', '-')}",
+            f"{TEXTS[lang]['format_label']}: {d.get('lesson_format', '-')}",
+            f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}",
         ]
 
         if message.from_user.username:
@@ -1213,7 +1251,7 @@ async def menu(message: types.Message):
         user_row, requests, payments = search_user_by_id(target_user_id)
 
         if not user_row:
-            await message.answer("Користувача не знайдено.", reply_markup=admin_menu(lang))
+            await message.answer(TEXTS[lang]["user_not_found"], reply_markup=admin_menu(lang))
             user_state[message.from_user.id] = "admin_panel"
             return
 
@@ -1222,7 +1260,7 @@ async def menu(message: types.Message):
         status = TEXTS[lang]["profile_premium"] if premium_until else TEXTS[lang]["profile_basic"]
 
         lines = [
-            f"🔎 Користувач {target_user_id}",
+            f"{TEXTS[lang]['user_search_title']} {target_user_id}",
             f"{TEXTS[lang]['profile_role']}: {role}",
             f"{TEXTS[lang]['profile_language']}: {LANG_NAMES.get(user_language, user_language)}",
             f"{TEXTS[lang]['profile_status']}: {status}",
@@ -1268,11 +1306,11 @@ async def menu(message: types.Message):
         reply_user_id = user_temp.get(message.from_user.id, {}).get("reply_user_id")
         if not reply_user_id:
             user_state[message.from_user.id] = "admin_panel"
-            await message.answer("Помилка. Спробуй ще раз.", reply_markup=admin_menu(lang))
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=admin_menu(lang))
             return
 
         try:
-            await bot.send_message(reply_user_id, f"💬 Повідомлення від адміністратора:\n\n{text}")
+            await bot.send_message(reply_user_id, f"{TEXTS[lang]['admin_message_prefix']}{text}")
             await message.answer(TEXTS[lang]["admin_reply_sent"], reply_markup=admin_menu(lang))
         except Exception as e:
             await message.answer(f"❌ Не вдалося відправити повідомлення: {e}", reply_markup=admin_menu(lang))
@@ -1312,7 +1350,10 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["menu_btn"]:
         user_state[message.from_user.id] = "system_menu"
-        await message.answer(TEXTS[lang]["system_menu_title"], reply_markup=system_menu(lang, is_admin=is_admin_user(message.from_user.id)))
+        await message.answer(
+            TEXTS[lang]["system_menu_title"],
+            reply_markup=system_menu(lang, is_admin=is_admin_user(message.from_user.id))
+        )
         return
 
     if text == TEXTS[lang]["my_profile_btn"]:
@@ -1328,6 +1369,15 @@ async def menu(message: types.Message):
     if text == TEXTS[lang]["admin_login_btn"]:
         user_state[message.from_user.id] = "admin_login_wait"
         await message.answer(TEXTS[lang]["ask_admin_login"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_profile_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_panel"
+        await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
         return
 
     if text == TEXTS[lang]["admin_logout_btn"]:
@@ -1391,7 +1441,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["admin_new_requests_btn"]:
         if not is_admin_user(message.from_user.id):
-            await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
 
         rows = get_new_requests()
@@ -1408,7 +1458,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["admin_premium_users_btn"]:
         if not is_admin_user(message.from_user.id):
-            await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
 
         rows = get_premium_users()
@@ -1425,7 +1475,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["admin_search_btn"]:
         if not is_admin_user(message.from_user.id):
-            await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
 
         user_state[message.from_user.id] = "admin_search_wait"
@@ -1434,7 +1484,7 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["admin_reply_btn"]:
         if not is_admin_user(message.from_user.id):
-            await message.answer("⛔ Немає доступу.", reply_markup=main_menu(lang))
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
 
         user_state[message.from_user.id] = "admin_reply_user_wait"
@@ -1448,6 +1498,7 @@ async def menu(message: types.Message):
             return
 
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+
 
 @dp.message_handler(content_types=types.ContentType.CONTACT)
 async def handle_contact(message: types.Message):
@@ -1489,4 +1540,3 @@ async def on_startup(_):
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
-
