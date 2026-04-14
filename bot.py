@@ -47,75 +47,11 @@ REQUEST_STATUS_DONE = "done"
 LANG_BUTTONS = {
     "🇺🇦 Українська": "ua",
     "🇷🇺 Русский": "ru",
-    "🇬🇧 English": "en",
-    "🇩🇪 Deutsch": "de",
-    "🇫🇷 Français": "fr",
-    "🇮🇹 Italiano": "it",
-    "🇪🇸 Español": "es",
-    "🇵🇱 Polski": "pl",
-    "🇷🇴 Română": "ro",
-    "🇳🇱 Nederlands": "nl",
-    "🇵🇹 Português": "pt",
-    "🇸🇪 Svenska": "sv",
-    "🇬🇷 Ελληνικά": "el",
-    "🇨🇿 Čeština": "cs",
-    "🇭🇺 Magyar": "hu",
-    "🇧🇬 Български": "bg",
-    "🇷🇸 Српски": "sr",
-    "🇩🇰 Dansk": "da",
-    "🇫🇮 Suomi": "fi",
-    "🇸🇰 Slovenčina": "sk",
-    "🇳🇴 Norsk": "no",
-    "🇭🇷 Hrvatski": "hr",
-    "🇧🇦 Bosanski": "bs",
-    "🇦🇱 Shqip": "sq",
-    "🇱🇹 Lietuvių": "lt",
-    "🇸🇮 Slovenščina": "sl",
-    "🇱🇻 Latviešu": "lv",
-    "🇪🇪 Eesti": "et",
-    "🇲🇰 Македонски": "mk",
-    "🇮🇸 Íslenska": "is",
-    "🇮🇪 Gaeilge": "ga",
-    "🇱🇺 Lëtzebuergesch": "lb",
-    "🇲🇹 Malti": "mt",
-    "🇧🇾 Беларуская": "be",
 }
 
 LANG_NAMES = {
     "ua": "Українська",
     "ru": "Русский",
-    "en": "English",
-    "de": "Deutsch",
-    "fr": "Français",
-    "it": "Italiano",
-    "es": "Español",
-    "pl": "Polski",
-    "ro": "Română",
-    "nl": "Nederlands",
-    "pt": "Português",
-    "sv": "Svenska",
-    "el": "Ελληνικά",
-    "cs": "Čeština",
-    "hu": "Magyar",
-    "bg": "Български",
-    "sr": "Српски",
-    "da": "Dansk",
-    "fi": "Suomi",
-    "sk": "Slovenčina",
-    "no": "Norsk",
-    "hr": "Hrvatski",
-    "bs": "Bosanski",
-    "sq": "Shqip",
-    "lt": "Lietuvių",
-    "sl": "Slovenščina",
-    "lv": "Latviešu",
-    "et": "Eesti",
-    "mk": "Македонски",
-    "is": "Íslenska",
-    "ga": "Gaeilge",
-    "lb": "Lëtzebuergesch",
-    "mt": "Malti",
-    "be": "Беларуская",
 }
 
 TEXTS = {
@@ -124,7 +60,6 @@ TEXTS = {
         "main_menu_hint": "👋 Обери дію",
         "start_phone_request": "📱 Для початку користування ботом поділись своїм номером телефону Telegram.",
         "start_phone_saved": "✅ Номер телефону збережено.",
-        "share_phone_btn": "📱 Поділитися номером",
 
         "task": "Виконати завдання🙏",
         "tutor": "Потрібен репетитор💪",
@@ -135,7 +70,7 @@ TEXTS = {
 
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
-        "premium_profile": "Преміум профіль",
+        "premium_profile": "Premium профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
@@ -211,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Мої заявки",
+        "tutor_my_requests_btn": "📂 Заявки в роботі",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -252,7 +187,7 @@ TEXTS = {
         "request_confirm_text": "Перевір дані заявки перед відправкою:",
         "choose_valid_subject": "Будь ласка, обери предмет кнопкою зі списку.",
         "categories_title": "📚 Обери категорію предмета:",
-        "tutor_subject_title": "Обери потрібний тобі предмет",
+        "tutor_subject_title": "Вибери предмет з якого тобі потрібен репетитор:",
         "ask_level": "Вкажи свій рівень або клас:",
         "ask_goal": "Напиши коротко свою ціль або проблему:",
         "ask_time": "Напиши зручний час для занять:",
@@ -283,7 +218,6 @@ TEXTS = {
         "main_menu_hint": "👋 Выберите действие",
         "start_phone_request": "📱 Для начала пользования ботом поделись своим номером телефона Telegram.",
         "start_phone_saved": "✅ Номер телефона сохранён.",
-        "share_phone_btn": "📱 Поделиться номером",
 
         "task": "Выполнить задание🙏",
         "tutor": "Нужен репетитор💪",
@@ -294,7 +228,7 @@ TEXTS = {
 
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
-        "premium_profile": "Премиум профиль",
+        "premium_profile": "Premium профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
         "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
@@ -370,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Мои заявки",
+        "tutor_my_requests_btn": "📂 Заявки в работе",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -411,7 +345,7 @@ TEXTS = {
         "request_confirm_text": "Проверь данные заявки перед отправкой:",
         "choose_valid_subject": "Пожалуйста, выбери предмет кнопкой из списка.",
         "categories_title": "📚 Выбери категорию предмета:",
-        "tutor_subject_title": "Выбери нужный тебе предмет",
+        "tutor_subject_title": "Выбери предмет, по которому тебе нужен репетитор:",
         "ask_level": "Укажи свой уровень или класс:",
         "ask_goal": "Напиши кратко свою цель или проблему:",
         "ask_time": "Напиши удобное время для занятий:",
@@ -439,158 +373,12 @@ TEXTS = {
     },
 }
 
-
-EN_TEXTS = {
-    "language_text": "👋 Choose the bot language",
-    "main_menu_hint": "👋 Choose an action",
-    "start_phone_request": "📱 To start using the bot, share your Telegram phone number.",
-    "start_phone_saved": "✅ Phone number saved.",
-    "share_phone_btn": "📱 Share phone number",
-    "task": "Complete a task🙏",
-    "tutor": "Need a tutor💪",
-    "my_requests_btn": "📂 My requests",
-    "support_btn": "🆘 Support",
-    "menu_btn": "📋 Menu",
-    "back": "🏠 Main menu",
-    "one": "One task",
-    "complex": "Complex work",
-    "premium_profile": "Premium profile",
-    "premium_profile_info": "For a whole month you get unlimited tasks in any school subject.",
-    "profile_upgrade_btn": "🚀 Upgrade to Premium",
-    "choose_service": "👇 Choose a service",
-    "file_sent": "📩 File sent to the administrator.",
-    "file_sent_to_tutor": "📩 File sent to Tutor.",
-    "no_payment": "❌ You need to pay first.",
-    "send_file_now": "📎 Now you can send a file.",
-    "pay_success_task": "✅ Payment of 250⭐ completed successfully.",
-    "pay_success_complex": "✅ Payment of 500⭐ completed successfully.",
-    "pay_success_premium_profile": "✅ Payment of 2500⭐ for Premium completed successfully.",
-    "premium_profile_activated": "💎 Premium profile activated for 30 days.",
-    "system_menu_title": "📋 Menu",
-    "my_profile_btn": "👤 My profile",
-    "premium_menu_btn": "⭐ Premium profile",
-    "tutor_login_btn": "🎓 Tutor login",
-    "tutor_profile_btn": "📚 Tutor profile",
-    "tutor_logout_btn": "🚪 Logout from Tutor profile",
-    "tutor_logout_success": "✅ You logged out from Tutor profile.",
-    "admin_login_btn": "🔐 Admin login",
-    "admin_profile_btn": "🛠 Admin profile",
-    "admin_logout_btn": "🚪 Logout from admin profile",
-    "admin_logout_success": "✅ You logged out from admin profile.",
-    "profile_title": "👤 My profile",
-    "profile_role": "Profile type",
-    "profile_language": "Bot language",
-    "profile_status": "Status",
-    "profile_until": "Premium active until",
-    "profile_user": "User",
-    "profile_admin": "Administrator",
-    "profile_tutor": "Tutor",
-    "profile_basic": "Basic profile",
-    "profile_premium": "Premium profile",
-    "payments_history_title": "💳 Payment history",
-    "orders_history_title": "📦 Request history",
-    "no_payments_history": "Payment history is empty.",
-    "no_requests": "You have no requests yet.",
-    "change_language_btn": "🌍 Change language",
-    "complaint_sent": "✅ Message sent to the administrator.",
-    "complaint_header": "🆘 New message",
-    "complaint_user_id": "User ID",
-    "complaint_username": "Username",
-    "complaint_language": "Language",
-    "complaint_profile": "Profile",
-    "complaint_text_label": "Text",
-    "support_text": "🆘 Send your question in one message and the administrator will receive it.",
-    "ask_admin_login": "Enter admin login:",
-    "ask_admin_password": "Enter admin password:",
-    "admin_login_success": "✅ Admin login successful.",
-    "admin_login_fail": "❌ Invalid login or password.",
-    "admin_panel_title": "🛠 Admin panel",
-    "admin_new_requests_btn": "📥 New requests",
-    "admin_premium_users_btn": "💎 Premium users",
-    "admin_search_btn": "🔎 Search",
-    "admin_reply_btn": "💬 Reply to client",
-    "admin_no_new_requests": "No new requests.",
-    "admin_no_premium_users": "No active premium users.",
-    "admin_search_prompt": "Enter user ID:",
-    "admin_reply_prompt": "Enter the user ID you want to reply to:",
-    "admin_reply_text_prompt": "Enter the reply text for the user:",
-    "admin_reply_sent": "✅ Message sent to the user.",
-    "tutor_auth_success": "✅ Tutor login successful.",
-    "tutor_register_success": "✅ Tutor profile created. Logged in.",
-    "tutor_panel_title": "📚 Tutor panel",
-    "tutor_panel_name": "👤 Tutor",
-    "tutor_panel_balance": "💰 Balance",
-    "tutor_panel_withdraw_status_ready": "✅ Withdrawal available",
-    "tutor_panel_withdraw_status_wait": "⏳ {remaining}⭐ more needed for withdrawal",
-    "tutor_new_requests_btn": "🆕 New requests",
-    "tutor_my_requests_btn": "📂 Requests in progress",
-    "tutor_no_new_requests": "No new requests for Tutor.",
-    "tutor_no_my_requests": "You have no requests in progress yet.",
-    "tutor_take_request_btn": "✅ Take into work",
-    "tutor_take_success": "✅ Request taken into work.",
-    "tutor_take_failed": "⚠️ This request was already taken by another Tutor.",
-    "tutor_request_taken_user": "✅ Your request has been taken by a Tutor. They can message you here.",
-    "tutor_request_detail_title": "📄 Request",
-    "tutor_write_user_btn": "💬 Write to user",
-    "tutor_send_file_btn": "📎 Send file to user",
-    "tutor_reply_text_prompt": "Enter a message for the user:",
-    "tutor_reply_text_sent": "✅ Message sent to the user.",
-    "tutor_send_file_prompt": "Send a file for the user in one message.",
-    "tutor_send_file_sent": "✅ File sent to the user.",
-    "request_files_title": "📎 Files for request",
-    "no_request_files": "No files for this request yet.",
-    "file_from_user_caption": "📎 File from user for request",
-    "file_from_tutor_caption": "📎 File from Tutor for request",
-    "tutor_balance_label": "Balance",
-    "tutor_withdraw_btn": "💸 Withdraw funds",
-    "tutor_enter_card": "Enter card number for withdrawal:",
-    "tutor_withdraw_sent": "✅ Withdrawal request sent to the administrator.",
-    "tutor_withdraw_not_available": "❌ Withdrawal is available only after reaching 1000⭐.",
-    "tutor_withdraw_balance_info": "💰 Current balance: {balance}⭐",
-    "tutor_withdraw_request_title": "💸 Tutor wants to withdraw funds",
-    "card_number_label": "Card number",
-    "request_status_new": "New",
-    "request_status_accepted": "Accepted",
-    "request_status_in_progress": "In progress",
-    "request_status_done": "Completed",
-    "premium_expire_3days": "⏳ Your premium will expire in 3 days.",
-    "premium_expired": "⚠️ Your premium has expired. The profile is basic again.",
-    "confirm_btn": "✅ Confirm",
-    "edit_btn": "✏️ Edit",
-    "request_confirm_text": "Check your request data before sending:",
-    "choose_valid_subject": "Please select a subject using the buttons.",
-    "categories_title": "📚 Choose a subject category:",
-    "tutor_subject_title": "Choose the subject you need",
-    "ask_level": "Specify your level or class:",
-    "ask_goal": "Briefly describe your goal or problem:",
-    "ask_time": "Write your preferred time for lessons:",
-    "ask_format": "Specify the format: online / offline:",
-    "tutor_request_sent": "✅ Request sent to the administrator. You will be contacted.",
-    "tutor_request_header": "📚 New tutor request",
-    "tutor_subject": "Subject",
-    "tutor_name": "Name",
-    "tutor_phone": "Phone",
-    "phone_invalid": "❌ Please enter a valid phone number or press the button.",
-    "no_access": "⛔ No access.",
-    "user_not_found": "User not found.",
-    "error_try_again": "Error. Try again.",
-    "admin_message_prefix": "💬 Message from administrator:\n\n",
-    "new_order_prefix": "📥 New order",
-    "user_id_label": "User ID",
-    "username_label": "Username",
-    "category_label": "Category",
-    "level_label": "Level / class",
-    "goal_label": "Goal / problem",
-    "preferred_time_label": "Preferred time",
-    "format_label": "Format",
-    "status_label": "Status",
-    "user_search_title": "🔎 User",
-}
-
-TEXTS["en"] = EN_TEXTS
-for _code in LANG_NAMES:
-    if _code not in TEXTS:
-        TEXTS[_code] = EN_TEXTS.copy()
+def get_telegram_full_name(user: types.User | None) -> str:
+    if not user:
+        return ""
+    parts = [user.first_name or "", user.last_name or ""]
+    full_name = " ".join(part.strip() for part in parts if part and part.strip()).strip()
+    return full_name or (user.username or "")
 
 
 def db():
@@ -614,13 +402,31 @@ def normalize_phone(phone: str) -> str:
     return f"+{digits}" if has_plus else digits
 
 
-def get_telegram_full_name(user: types.User | None) -> str:
-    if not user:
-        return ""
-    parts = [user.first_name or "", user.last_name or ""]
-    full_name = " ".join(part.strip() for part in parts if part and part.strip()).strip()
-    return full_name or (user.username or "")
+def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
+    balance = get_tutor_balance(tutor_user_id)
+    target = 1000
+    remaining = max(0, target - balance)
+    return balance, target, remaining
 
+
+def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
+    return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
+
+
+def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
+    return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
+
+
+def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, remaining = get_tutor_withdraw_progress(tutor_user_id)
+    if remaining > 0:
+        if lang == "ua":
+            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
+    if lang == "ua":
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
+    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
 
 def init_db():
     conn = db()
@@ -802,16 +608,10 @@ def detect_language_code(language_code: str):
     if not language_code:
         return "ua"
     code = language_code.lower()
-    prefix = code.split("-")[0].split("_")[0]
-    mapping = {
-        "uk": "ua", "ru": "ru", "en": "en", "de": "de", "fr": "fr", "it": "it",
-        "es": "es", "pl": "pl", "ro": "ro", "nl": "nl", "pt": "pt", "sv": "sv",
-        "el": "el", "cs": "cs", "hu": "hu", "bg": "bg", "sr": "sr", "da": "da",
-        "fi": "fi", "sk": "sk", "no": "no", "hr": "hr", "bs": "bs", "sq": "sq",
-        "lt": "lt", "sl": "sl", "lv": "lv", "et": "et", "mk": "mk", "is": "is",
-        "ga": "ga", "lb": "lb", "mt": "mt", "be": "be",
-    }
-    return mapping.get(prefix, "en")
+    if code.startswith("ru"):
+        return "ru"
+    return "ua"
+
 
 def set_user_language(user_id: int, language: str, manual: bool = False):
     ensure_user(user_id)
@@ -1676,7 +1476,7 @@ def main_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
     kb.row(TEXTS[lang]["tutor"])
-    kb.row(TEXTS[lang]["my_requests_btn"], TEXTS[lang]["support_btn"])
+    kb.row(TEXTS[lang]["support_btn"])
     kb.row(TEXTS[lang]["menu_btn"])
     return kb
 
@@ -1689,20 +1489,17 @@ def back_menu(lang: str = "ua"):
 
 def get_start_phone_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    label = TEXTS.get(lang, TEXTS["en"]).get("share_phone_btn", "📱 Share phone number")
-    kb.row(KeyboardButton(label, request_contact=True))
+    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
     return kb
+
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["my_profile_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
         kb.row(TEXTS[lang]["tutor_logout_btn"])
     else:
-        if not is_admin:
-            kb.row(TEXTS[lang]["premium_menu_btn"])
         kb.row(TEXTS[lang]["tutor_login_btn"])
 
     if is_admin:
@@ -1711,6 +1508,10 @@ def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
 
+    if not is_admin and not is_tutor:
+        kb.row(TEXTS[lang]["premium_menu_btn"])
+
+    kb.row(TEXTS[lang]["my_profile_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1743,52 +1544,25 @@ def tutor_menu(user_id: int, lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["tutor_new_requests_btn"])
     kb.row(TEXTS[lang]["tutor_my_requests_btn"])
-    kb.row(TEXTS[lang]["tutor_withdraw_btn"])
+    kb.row(get_tutor_withdraw_button_text(user_id, lang))
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
-POPULAR_TUTOR_SUBJECTS = {
-    "ua": [
-        "Математика", "Англійська мова", "Рідна мова / література", "Фізика", "Хімія",
-        "Біологія", "Німецька мова", "Французька мова", "Іспанська мова", "Італійська мова",
-        "Інформатика / програмування", "Географія", "Історія", "Економіка", "Підготовка до іспитів",
-        "Польська мова", "Українська мова", "Російська мова", "Музика", "Фортепіано",
-        "Гітара", "Малювання / мистецтво", "Шахи", "Статистика", "Латинь"
-    ],
-    "ru": [
-        "Математика", "Английский язык", "Родной язык / литература", "Физика", "Химия",
-        "Биология", "Немецкий язык", "Французский язык", "Испанский язык", "Итальянский язык",
-        "Информатика / программирование", "География", "История", "Экономика", "Подготовка к экзаменам",
-        "Польский язык", "Украинский язык", "Русский язык", "Музыка", "Фортепиано",
-        "Гитара", "Рисование / искусство", "Шахматы", "Статистика", "Латынь"
-    ],
-    "en": [
-        "Mathematics", "English language", "Native language / literature", "Physics", "Chemistry",
-        "Biology", "German language", "French language", "Spanish language", "Italian language",
-        "Computer science / programming", "Geography", "History", "Economics", "Exam preparation",
-        "Polish language", "Ukrainian language", "Russian language", "Music", "Piano",
-        "Guitar", "Drawing / art", "Chess", "Statistics", "Latin"
+SUBJECT_CATEGORIES = {
+    "📚 Предмети": [
+        "Математика",
+        "Англійська",
     ],
 }
 
 
-def get_popular_tutor_subjects(lang: str) -> list[str]:
-    return POPULAR_TUTOR_SUBJECTS.get(lang, POPULAR_TUTOR_SUBJECTS["en"])
-
 def get_language_keyboard(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    ordered_buttons = list(LANG_BUTTONS.keys())
-    row = []
-    for button in ordered_buttons:
-        row.append(button)
-        if len(row) == 2:
-            kb.row(*row)
-            row = []
-    if row:
-        kb.row(*row)
-    kb.row(TEXTS.get(lang, TEXTS["en"])["back"])
+    kb.row("🇺🇦 Українська", "🇷🇺 Русский")
+    kb.row(TEXTS[lang]["back"])
     return kb
+
 
 def get_task_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1800,12 +1574,16 @@ def get_task_menu(lang: str = "ua"):
 
 
 def get_tutor_categories_menu(lang: str = "ua"):
-    return get_tutor_subjects_menu("__all__", lang)
-
-
-def get_tutor_subjects_menu(category: str = "__all__", lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    subjects = get_popular_tutor_subjects(lang)
+    for category in SUBJECT_CATEGORIES.keys():
+        kb.row(category)
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def get_tutor_subjects_menu(category: str, lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    subjects = SUBJECT_CATEGORIES.get(category, [])
 
     row = []
     for subject in subjects:
@@ -1819,6 +1597,7 @@ def get_tutor_subjects_menu(category: str = "__all__", lang: str = "ua"):
 
     kb.row(TEXTS[lang]["back"])
     return kb
+
 
 def get_request_confirm_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1984,15 +1763,9 @@ async def start(message: types.Message):
     ensure_user(message.from_user.id)
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
-    user = get_user(message.from_user.id)
 
-    if not user.get("phone"):
-        user_state[message.from_user.id] = "start_phone_wait"
-        await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
-        return
-
-    user_state[message.from_user.id] = "main"
-    await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+    user_state[message.from_user.id] = "start_phone_wait"
+    await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
 
 
 @dp.message_handler(commands=["myprofile"])
@@ -2226,20 +1999,6 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
-    if text == TEXTS[lang]["my_requests_btn"]:
-        user_temp.pop(message.from_user.id, None)
-        requests = get_user_requests(message.from_user.id)
-        if not requests:
-            await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
-            return
-
-        lines = [TEXTS[lang]["orders_history_title"] + ":"]
-        for request_id, subject, status_code, created_at in requests:
-            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
-
-        await message.answer("\n".join(lines), reply_markup=back_menu(lang))
-        return
-
     if text == TEXTS[lang]["support_btn"]:
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "complaint_wait"
@@ -2253,9 +2012,9 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
-        user_temp[message.from_user.id] = {"category": "__all__"}
-        user_state[message.from_user.id] = "tutor_subject_wait"
-        await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu("__all__", lang))
+        user_temp[message.from_user.id] = {}
+        user_state[message.from_user.id] = "tutor_category_wait"
+        await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
         return
 
     # ---------------------------
@@ -2358,6 +2117,7 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['complaint_user_id']}: {message.from_user.id}",
             f"{TEXTS[lang]['complaint_language']}: {language_name}",
             f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
+            f"{TEXTS[lang]['tutor_phone']}: {user.get('phone') or '-'}",
         ]
 
         if user.get("full_name"):
@@ -2387,17 +2147,21 @@ async def menu(message: types.Message):
         return
 
     if state == "tutor_category_wait":
-        user_temp[message.from_user.id] = {"category": "__all__"}
+        if text not in SUBJECT_CATEGORIES:
+            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+            return
+
+        user_temp[message.from_user.id] = {"category": text}
         user_state[message.from_user.id] = "tutor_subject_wait"
         await message.answer(
             TEXTS[lang]["tutor_subject_title"],
-            reply_markup=get_tutor_subjects_menu("__all__", lang)
+            reply_markup=get_tutor_subjects_menu(text, lang)
         )
         return
 
     if state == "tutor_subject_wait":
-        selected_category = user_temp.get(message.from_user.id, {}).get("category", "__all__")
-        valid_subjects = get_popular_tutor_subjects(lang)
+        selected_category = user_temp.get(message.from_user.id, {}).get("category")
+        valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
 
         if text not in valid_subjects:
             await message.answer(
@@ -2683,8 +2447,11 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["premium_profile"]:
-        user_state[message.from_user.id] = "premium_profile_screen"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        user_state[message.from_user.id] = "task_menu"
+        await message.answer(
+            TEXTS[lang]["premium_profile_info"],
+            reply_markup=get_task_menu(lang)
+        )
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="Premium Profile Payment",
@@ -2757,7 +2524,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
             return
 
-    if text == TEXTS[lang]["tutor_withdraw_btn"]:
+    if is_tutor_withdraw_button_text(text, message.from_user.id, lang):
         if not is_tutor_user(message.from_user.id):
             await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
@@ -2788,7 +2555,7 @@ async def menu(message: types.Message):
         rows = get_unassigned_tutor_requests()
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
@@ -2814,6 +2581,7 @@ async def menu(message: types.Message):
                 f"Created: {created_at[:16]}"
             )
             await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
+        await message.answer(build_tutor_balance_info_text(message.from_user.id, lang), reply_markup=tutor_menu(message.from_user.id, lang))
         return
 
     if text == TEXTS[lang]["tutor_my_requests_btn"]:
@@ -2824,13 +2592,13 @@ async def menu(message: types.Message):
         rows = get_tutor_assigned_requests(message.from_user.id)
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
 
         await message.answer(
-            TEXTS[lang]["tutor_my_requests_btn"] + ":",
+            TEXTS[lang]["tutor_my_requests_btn"] + ":\n\n" + build_tutor_balance_info_text(message.from_user.id, lang),
             reply_markup=build_tutor_requests_keyboard(rows, lang)
         )
         return
@@ -2890,7 +2658,9 @@ async def handle_contact(message: types.Message):
 
     if state == "start_phone_wait":
         phone = normalize_phone(message.contact.phone_number)
-        full_name = get_telegram_full_name(message.from_user)
+        contact_name_parts = [getattr(message.contact, "first_name", "") or "", getattr(message.contact, "last_name", "") or ""]
+        contact_full_name = " ".join(part.strip() for part in contact_name_parts if part and part.strip()).strip()
+        full_name = contact_full_name or get_telegram_full_name(message.from_user)
 
         set_user_phone(message.from_user.id, phone)
         set_user_full_name(message.from_user.id, full_name)
@@ -2915,7 +2685,6 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
-    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
