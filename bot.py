@@ -146,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Мої заявки",
+        "tutor_my_requests_btn": "📂 Заявки в роботі",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -304,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Мои заявки",
+        "tutor_my_requests_btn": "📂 Заявки в работе",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -401,6 +401,32 @@ def normalize_phone(phone: str) -> str:
         return ""
     return f"+{digits}" if has_plus else digits
 
+
+def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
+    balance = get_tutor_balance(tutor_user_id)
+    target = 1000
+    remaining = max(0, target - balance)
+    return balance, target, remaining
+
+
+def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
+    return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
+
+
+def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
+    return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
+
+
+def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
+    balance, target, remaining = get_tutor_withdraw_progress(tutor_user_id)
+    if remaining > 0:
+        if lang == "ua":
+            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
+    if lang == "ua":
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
+    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
 
 def init_db():
     conn = db()
@@ -1450,7 +1476,7 @@ def main_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
     kb.row(TEXTS[lang]["tutor"])
-    kb.row(TEXTS[lang]["my_requests_btn"], TEXTS[lang]["support_btn"])
+    kb.row(TEXTS[lang]["support_btn"])
     kb.row(TEXTS[lang]["menu_btn"])
     return kb
 
@@ -1517,7 +1543,7 @@ def tutor_menu(user_id: int, lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["tutor_new_requests_btn"])
     kb.row(TEXTS[lang]["tutor_my_requests_btn"])
-    kb.row(TEXTS[lang]["tutor_withdraw_btn"])
+    kb.row(get_tutor_withdraw_button_text(user_id, lang))
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1978,18 +2004,20 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
-    if text == TEXTS[lang]["my_requests_btn"]:
+    if text == TEXTS[lang]["premium_menu_btn"]:
         user_temp.pop(message.from_user.id, None)
-        requests = get_user_requests(message.from_user.id)
-        if not requests:
-            await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
-            return
-
-        lines = [TEXTS[lang]["orders_history_title"] + ":"]
-        for request_id, subject, status_code, created_at in requests:
-            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
-
-        await message.answer("\n".join(lines), reply_markup=back_menu(lang))
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["support_btn"]:
@@ -2005,12 +2033,6 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
-        user = get_user(message.from_user.id)
-        if not (user.get("phone") or ""):
-            user_state[message.from_user.id] = "start_phone_wait"
-            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
-            return
-
         user_temp[message.from_user.id] = {}
         user_state[message.from_user.id] = "tutor_category_wait"
         await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
@@ -2120,6 +2142,9 @@ async def menu(message: types.Message):
 
         if user.get("full_name"):
             lines.append(f"{TEXTS[lang]['tutor_name']}: {user['full_name']}")
+
+        if user.get("phone"):
+            lines.append(f"{TEXTS[lang]['tutor_phone']}: {user['phone']}")
 
         if message.from_user.username:
             lines.append(f"{TEXTS[lang]['complaint_username']}: @{message.from_user.username}")
@@ -2234,18 +2259,12 @@ async def menu(message: types.Message):
         user_profile = get_user(message.from_user.id)
         client_name = user_profile.get("full_name") or get_display_name_for_user(message.from_user.id)
 
-        phone_value = (user_profile.get("phone") or "").strip()
-        if not phone_value:
-            user_state[message.from_user.id] = "start_phone_wait"
-            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
-            return
-
         request_id = save_tutor_request(
             user_id=message.from_user.id,
             category=d.get("category", ""),
             subject=d.get("subject", ""),
             client_name=client_name,
-            phone=phone_value,
+            phone=user_profile.get("phone", ""),
             level=d.get("level", ""),
             goal=d.get("goal", ""),
             preferred_time=d.get("preferred_time", ""),
@@ -2525,7 +2544,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
             return
 
-    if text == TEXTS[lang]["tutor_withdraw_btn"]:
+    if is_tutor_withdraw_button_text(text, message.from_user.id, lang):
         if not is_tutor_user(message.from_user.id):
             await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
@@ -2556,7 +2575,7 @@ async def menu(message: types.Message):
         rows = get_unassigned_tutor_requests()
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
@@ -2582,6 +2601,7 @@ async def menu(message: types.Message):
                 f"Created: {created_at[:16]}"
             )
             await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
+        await message.answer(build_tutor_balance_info_text(message.from_user.id, lang), reply_markup=tutor_menu(message.from_user.id, lang))
         return
 
     if text == TEXTS[lang]["tutor_my_requests_btn"]:
@@ -2592,13 +2612,13 @@ async def menu(message: types.Message):
         rows = get_tutor_assigned_requests(message.from_user.id)
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
 
         await message.answer(
-            TEXTS[lang]["tutor_my_requests_btn"] + ":",
+            TEXTS[lang]["tutor_my_requests_btn"] + ":\n\n" + build_tutor_balance_info_text(message.from_user.id, lang),
             reply_markup=build_tutor_requests_keyboard(rows, lang)
         )
         return
@@ -2683,6 +2703,7 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
+    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
