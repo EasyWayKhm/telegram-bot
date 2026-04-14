@@ -70,7 +70,7 @@ TEXTS = {
 
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
-        "premium_profile": "Преміум профіль",
+        "premium_profile": "Premium профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
@@ -228,7 +228,7 @@ TEXTS = {
 
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
-        "premium_profile": "Премиум профиль",
+        "premium_profile": "Premium профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
         "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
@@ -1495,14 +1495,11 @@ def get_start_phone_menu(lang: str = "ua"):
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["my_profile_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
         kb.row(TEXTS[lang]["tutor_logout_btn"])
     else:
-        if not is_admin:
-            kb.row(TEXTS[lang]["premium_menu_btn"])
         kb.row(TEXTS[lang]["tutor_login_btn"])
 
     if is_admin:
@@ -1511,6 +1508,10 @@ def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
 
+    if not is_admin and not is_tutor:
+        kb.row(TEXTS[lang]["premium_menu_btn"])
+
+    kb.row(TEXTS[lang]["my_profile_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -2466,8 +2467,11 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["premium_profile"]:
-        user_state[message.from_user.id] = "premium_profile_screen"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        user_state[message.from_user.id] = "task_menu"
+        await message.answer(
+            TEXTS[lang]["premium_profile_info"],
+            reply_markup=get_task_menu(lang)
+        )
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="Premium Profile Payment",
