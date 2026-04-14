@@ -124,6 +124,7 @@ TEXTS = {
         "main_menu_hint": "👋 Обери дію",
         "start_phone_request": "📱 Для початку користування ботом поділись своїм номером телефону Telegram.",
         "start_phone_saved": "✅ Номер телефону збережено.",
+        "share_phone_btn": "📱 Поділитися номером",
 
         "task": "Виконати завдання🙏",
         "tutor": "Потрібен репетитор💪",
@@ -251,7 +252,7 @@ TEXTS = {
         "request_confirm_text": "Перевір дані заявки перед відправкою:",
         "choose_valid_subject": "Будь ласка, обери предмет кнопкою зі списку.",
         "categories_title": "📚 Обери категорію предмета:",
-        "tutor_subject_title": "Вибери предмет з якого тобі потрібен репетитор:",
+        "tutor_subject_title": "Обери потрібний тобі предмет",
         "ask_level": "Вкажи свій рівень або клас:",
         "ask_goal": "Напиши коротко свою ціль або проблему:",
         "ask_time": "Напиши зручний час для занять:",
@@ -282,6 +283,7 @@ TEXTS = {
         "main_menu_hint": "👋 Выберите действие",
         "start_phone_request": "📱 Для начала пользования ботом поделись своим номером телефона Telegram.",
         "start_phone_saved": "✅ Номер телефона сохранён.",
+        "share_phone_btn": "📱 Поделиться номером",
 
         "task": "Выполнить задание🙏",
         "tutor": "Нужен репетитор💪",
@@ -409,7 +411,7 @@ TEXTS = {
         "request_confirm_text": "Проверь данные заявки перед отправкой:",
         "choose_valid_subject": "Пожалуйста, выбери предмет кнопкой из списка.",
         "categories_title": "📚 Выбери категорию предмета:",
-        "tutor_subject_title": "Выбери предмет, по которому тебе нужен репетитор:",
+        "tutor_subject_title": "Выбери нужный тебе предмет",
         "ask_level": "Укажи свой уровень или класс:",
         "ask_goal": "Напиши кратко свою цель или проблему:",
         "ask_time": "Напиши удобное время для занятий:",
@@ -436,6 +438,7 @@ TEXTS = {
         "user_search_title": "🔎 Пользователь",
     },
 }
+
 
 EN_TEXTS = {
     "language_text": "👋 Choose the bot language",
@@ -557,7 +560,7 @@ EN_TEXTS = {
     "request_confirm_text": "Check your request data before sending:",
     "choose_valid_subject": "Please select a subject using the buttons.",
     "categories_title": "📚 Choose a subject category:",
-    "tutor_subject_title": "Choose the subject you need:",
+    "tutor_subject_title": "Choose the subject you need",
     "ask_level": "Specify your level or class:",
     "ask_goal": "Briefly describe your goal or problem:",
     "ask_time": "Write your preferred time for lessons:",
@@ -584,15 +587,32 @@ EN_TEXTS = {
     "user_search_title": "🔎 User",
 }
 
-TEXTS["ua"]["share_phone_btn"] = "📱 Поділитися номером"
-TEXTS["ru"]["share_phone_btn"] = "📱 Поделиться номером"
-TEXTS["ua"]["tutor_subject_title"] = "Обери потрібний тобі предмет"
-TEXTS["ru"]["tutor_subject_title"] = "Выбери нужный тебе предмет"
-TEXTS["ua"]["tutor_my_requests_btn"] = "📂 Заявки в роботі"
 TEXTS["en"] = EN_TEXTS
 for _code in LANG_NAMES:
     if _code not in TEXTS:
         TEXTS[_code] = EN_TEXTS.copy()
+
+
+def db():
+    return sqlite3.connect(DB_PATH)
+
+
+def column_exists(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    return column_name in columns
+
+
+def normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    value = phone.strip()
+    has_plus = value.startswith("+")
+    digits = re.sub(r"\D", "", value)
+    if not digits:
+        return ""
+    return f"+{digits}" if has_plus else digits
+
 
 def get_telegram_full_name(user: types.User | None) -> str:
     if not user:
@@ -1669,9 +1689,9 @@ def back_menu(lang: str = "ua"):
 
 def get_start_phone_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton(TEXTS.get(lang, TEXTS["en"])["share_phone_btn"], request_contact=True))
+    label = TEXTS.get(lang, TEXTS["en"]).get("share_phone_btn", "📱 Share phone number")
+    kb.row(KeyboardButton(label, request_contact=True))
     return kb
-
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1730,32 +1750,31 @@ def tutor_menu(user_id: int, lang: str = "ua"):
 
 POPULAR_TUTOR_SUBJECTS = {
     "ua": [
-        "Математика", "Англійська мова", "Рідна мова та література", "Фізика", "Хімія",
-        "Біологія", "Інформатика / програмування", "Німецька мова", "Французька мова",
-        "Іспанська мова", "Історія", "Географія", "Економіка", "Польська мова",
-        "Підготовка до іспитів", "Статистика", "Італійська мова", "Музика",
-        "Фортепіано", "Гітара", "Малювання / мистецтво", "Шахи", "Латинь"
+        "Математика", "Англійська мова", "Рідна мова / література", "Фізика", "Хімія",
+        "Біологія", "Німецька мова", "Французька мова", "Іспанська мова", "Італійська мова",
+        "Інформатика / програмування", "Географія", "Історія", "Економіка", "Підготовка до іспитів",
+        "Польська мова", "Українська мова", "Російська мова", "Музика", "Фортепіано",
+        "Гітара", "Малювання / мистецтво", "Шахи", "Статистика", "Латинь"
     ],
     "ru": [
-        "Математика", "Английский язык", "Родной язык и литература", "Физика", "Химия",
-        "Биология", "Информатика / программирование", "Немецкий язык", "Французский язык",
-        "Испанский язык", "История", "География", "Экономика", "Польский язык",
-        "Подготовка к экзаменам", "Статистика", "Итальянский язык", "Музыка",
-        "Фортепиано", "Гитара", "Рисование / искусство", "Шахматы", "Латынь"
+        "Математика", "Английский язык", "Родной язык / литература", "Физика", "Химия",
+        "Биология", "Немецкий язык", "Французский язык", "Испанский язык", "Итальянский язык",
+        "Информатика / программирование", "География", "История", "Экономика", "Подготовка к экзаменам",
+        "Польский язык", "Украинский язык", "Русский язык", "Музыка", "Фортепиано",
+        "Гитара", "Рисование / искусство", "Шахматы", "Статистика", "Латынь"
     ],
     "en": [
-        "Mathematics", "English", "Native language and literature", "Physics", "Chemistry",
-        "Biology", "Computer science / programming", "German", "French", "Spanish",
-        "History", "Geography", "Economics", "Polish", "Exam preparation",
-        "Statistics", "Italian", "Music", "Piano", "Guitar", "Drawing / Art",
-        "Chess", "Latin"
+        "Mathematics", "English language", "Native language / literature", "Physics", "Chemistry",
+        "Biology", "German language", "French language", "Spanish language", "Italian language",
+        "Computer science / programming", "Geography", "History", "Economics", "Exam preparation",
+        "Polish language", "Ukrainian language", "Russian language", "Music", "Piano",
+        "Guitar", "Drawing / art", "Chess", "Statistics", "Latin"
     ],
 }
 
 
 def get_popular_tutor_subjects(lang: str) -> list[str]:
     return POPULAR_TUTOR_SUBJECTS.get(lang, POPULAR_TUTOR_SUBJECTS["en"])
-
 
 def get_language_keyboard(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1770,7 +1789,6 @@ def get_language_keyboard(lang: str = "ua"):
         kb.row(*row)
     kb.row(TEXTS.get(lang, TEXTS["en"])["back"])
     return kb
-
 
 def get_task_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -1801,7 +1819,6 @@ def get_tutor_subjects_menu(category: str = "__all__", lang: str = "ua"):
 
     kb.row(TEXTS[lang]["back"])
     return kb
-
 
 def get_request_confirm_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -2427,7 +2444,7 @@ async def menu(message: types.Message):
 
         confirm_text = (
             f"{TEXTS[lang]['request_confirm_text']}\n\n"
-            f"{TEXTS[lang]['category_label']}: {'-' if d.get('category') in (None, '', '__all__') else d.get('category')}\n"
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
             f"{TEXTS[lang]['tutor_name']}: {client_name}\n"
             f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}\n"
@@ -2442,9 +2459,9 @@ async def menu(message: types.Message):
 
     if state == "tutor_confirm_wait":
         if text == TEXTS[lang]["edit_btn"]:
-            user_state[message.from_user.id] = "tutor_subject_wait"
-            user_temp[message.from_user.id] = {"category": "__all__"}
-            await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu("__all__", lang))
+            user_state[message.from_user.id] = "tutor_category_wait"
+            user_temp[message.from_user.id] = {}
+            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
             return
 
         if text != TEXTS[lang]["confirm_btn"]:
@@ -2457,7 +2474,7 @@ async def menu(message: types.Message):
 
         request_id = save_tutor_request(
             user_id=message.from_user.id,
-            category="" if d.get("category") == "__all__" else d.get("category", ""),
+            category=d.get("category", ""),
             subject=d.get("subject", ""),
             client_name=client_name,
             phone=user_profile.get("phone", ""),
@@ -2478,7 +2495,7 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['complaint_language']}: {language_name}",
             f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
             f"{TEXTS[lang]['tutor_name']}: {client_name}",
-            f"{TEXTS[lang]['category_label']}: {'-' if d.get('category') in (None, '', '__all__') else d.get('category')}",
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}",
             f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}",
             f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}",
             f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}",
@@ -2898,6 +2915,7 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
+    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
