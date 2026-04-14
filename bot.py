@@ -70,7 +70,7 @@ TEXTS = {
 
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
-        "premium_profile": "Premium профіль",
+        "premium_profile": "Преміум профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
@@ -146,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Заявки в роботі",
+        "tutor_my_requests_btn": "📂 Мої заявки",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -228,7 +228,7 @@ TEXTS = {
 
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
-        "premium_profile": "Premium профиль",
+        "premium_profile": "Премиум профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
         "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
@@ -304,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Заявки в работе",
+        "tutor_my_requests_btn": "📂 Мои заявки",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -1495,27 +1495,21 @@ def get_start_phone_menu(lang: str = "ua"):
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["my_profile_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
+        kb.row(TEXTS[lang]["tutor_logout_btn"])
     else:
+        if not is_admin:
+            kb.row(TEXTS[lang]["premium_menu_btn"])
         kb.row(TEXTS[lang]["tutor_login_btn"])
 
     if is_admin:
         kb.row(TEXTS[lang]["admin_profile_btn"])
+        kb.row(TEXTS[lang]["admin_logout_btn"])
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
-
-    if not is_admin and not is_tutor:
-        kb.row(TEXTS[lang]["premium_menu_btn"])
-
-    kb.row(TEXTS[lang]["my_profile_btn"])
-
-    if is_tutor:
-        kb.row(TEXTS[lang]["tutor_logout_btn"])
-
-    if is_admin:
-        kb.row(TEXTS[lang]["admin_logout_btn"])
 
     kb.row(TEXTS[lang]["back"])
     return kb
@@ -2010,23 +2004,7 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
-    if text == TEXTS[lang]["premium_menu_btn"]:
-        user_temp.pop(message.from_user.id, None)
-        user_state[message.from_user.id] = "premium_profile_screen"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-        await bot.send_invoice(
-            chat_id=message.chat.id,
-            title="Premium Profile Payment",
-            description="Unlimited tasks for one month",
-            payload="premium_profile_payment",
-            provider_token="",
-            currency="XTR",
-            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
-            start_parameter="premium_profile"
-        )
-        return
-
-    if text == TEXTS[lang]["my_requests_btn"] and not is_tutor_user(message.from_user.id):
+    if text == TEXTS[lang]["my_requests_btn"]:
         user_temp.pop(message.from_user.id, None)
         requests = get_user_requests(message.from_user.id)
         if not requests:
@@ -2158,6 +2136,7 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['complaint_user_id']}: {message.from_user.id}",
             f"{TEXTS[lang]['complaint_language']}: {language_name}",
             f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
+            f"{TEXTS[lang]['tutor_phone']}: {user.get('phone') or '-'}",
         ]
 
         if user.get("full_name"):
@@ -2487,8 +2466,8 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["premium_profile"]:
-        user_state[message.from_user.id] = "task_menu"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=get_task_menu(lang))
+        user_state[message.from_user.id] = "premium_profile_screen"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="Premium Profile Payment",
@@ -2720,7 +2699,6 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
-    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
