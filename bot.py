@@ -70,7 +70,7 @@ TEXTS = {
 
         "one": "Одне завдання",
         "complex": "Комплексне виконання роботи",
-        "premium_profile": "Преміум профіль",
+        "premium_profile": "Premium профіль",
         "premium_profile_info": "Увесь місяць тобі доступна необмежена кількість завдань з будь якого шкільного предмету",
         "profile_upgrade_btn": "🚀 Прокачати профіль до Premium рівня",
         "choose_service": "👇 Обери послугу",
@@ -228,7 +228,7 @@ TEXTS = {
 
         "one": "Одно задание",
         "complex": "Комплексное выполнение работы",
-        "premium_profile": "Премиум профиль",
+        "premium_profile": "Premium профиль",
         "premium_profile_info": "Весь месяц тебе доступно неограниченное количество заданий по любому школьному предмету",
         "profile_upgrade_btn": "🚀 Прокачать профиль до Premium уровня",
         "choose_service": "👇 Выберите услугу",
@@ -1476,7 +1476,7 @@ def main_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
     kb.row(TEXTS[lang]["tutor"])
-    kb.row(TEXTS[lang]["support_btn"])
+    kb.row(TEXTS[lang]["my_requests_btn"], TEXTS[lang]["support_btn"])
     kb.row(TEXTS[lang]["menu_btn"])
     return kb
 
@@ -1495,21 +1495,27 @@ def get_start_phone_menu(lang: str = "ua"):
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["my_profile_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
-        kb.row(TEXTS[lang]["tutor_logout_btn"])
     else:
-        if not is_admin:
-            kb.row(TEXTS[lang]["premium_menu_btn"])
         kb.row(TEXTS[lang]["tutor_login_btn"])
 
     if is_admin:
         kb.row(TEXTS[lang]["admin_profile_btn"])
-        kb.row(TEXTS[lang]["admin_logout_btn"])
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
+
+    if not is_admin and not is_tutor:
+        kb.row(TEXTS[lang]["premium_menu_btn"])
+
+    kb.row(TEXTS[lang]["my_profile_btn"])
+
+    if is_tutor:
+        kb.row(TEXTS[lang]["tutor_logout_btn"])
+
+    if is_admin:
+        kb.row(TEXTS[lang]["admin_logout_btn"])
 
     kb.row(TEXTS[lang]["back"])
     return kb
@@ -2020,6 +2026,20 @@ async def menu(message: types.Message):
         )
         return
 
+    if text == TEXTS[lang]["my_requests_btn"] and not is_tutor_user(message.from_user.id):
+        user_temp.pop(message.from_user.id, None)
+        requests = get_user_requests(message.from_user.id)
+        if not requests:
+            await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
+            return
+
+        lines = [TEXTS[lang]["orders_history_title"] + ":"]
+        for request_id, subject, status_code, created_at in requests:
+            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
+
+        await message.answer("\n".join(lines), reply_markup=back_menu(lang))
+        return
+
     if text == TEXTS[lang]["support_btn"]:
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "complaint_wait"
@@ -2142,9 +2162,6 @@ async def menu(message: types.Message):
 
         if user.get("full_name"):
             lines.append(f"{TEXTS[lang]['tutor_name']}: {user['full_name']}")
-
-        if user.get("phone"):
-            lines.append(f"{TEXTS[lang]['tutor_phone']}: {user['phone']}")
 
         if message.from_user.username:
             lines.append(f"{TEXTS[lang]['complaint_username']}: @{message.from_user.username}")
@@ -2470,8 +2487,8 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["premium_profile"]:
-        user_state[message.from_user.id] = "premium_profile_screen"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
+        user_state[message.from_user.id] = "task_menu"
+        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=get_task_menu(lang))
         await bot.send_invoice(
             chat_id=message.chat.id,
             title="Premium Profile Payment",
