@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import os
 import re
@@ -147,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Заявки в роботі",
+        "tutor_my_requests_btn": "📂 Мої заявки",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -305,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Заявки в работе",
+        "tutor_my_requests_btn": "📂 Мои заявки",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -381,107 +380,6 @@ def get_telegram_full_name(user: types.User | None) -> str:
     full_name = " ".join(part.strip() for part in parts if part and part.strip()).strip()
     return full_name or (user.username or "")
 
-
-def db():
-    conn = sqlite3.connect(DB_PATH, timeout=20)
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-    except Exception:
-        pass
-    return conn
-
-
-def column_exists(cur, table_name: str, column_name: str) -> bool:
-    cur.execute(f"PRAGMA table_info({table_name})")
-    columns = [row[1] for row in cur.fetchall()]
-    return column_name in columns
-
-
-def normalize_phone(phone: str) -> str:
-    if not phone:
-        return ""
-    value = phone.strip()
-    has_plus = value.startswith("+")
-    digits = re.sub(r"\D", "", value)
-    if not digits:
-        return ""
-    return f"+{digits}" if has_plus else digits
-
-
-def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
-    balance = get_tutor_balance(tutor_user_id)
-    target = 1000
-    remaining = max(0, target - balance)
-    return balance, target, remaining
-
-
-def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
-    balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
-    return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
-
-
-def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
-    return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
-
-
-def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
-    balance, _, remaining = get_tutor_withdraw_progress(tutor_user_id)
-    if remaining > 0:
-        if lang == "ua":
-            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
-        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
-    if lang == "ua":
-        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
-    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
-
-
-def db():
-    return sqlite3.connect(DB_PATH)
-
-
-def column_exists(cur, table_name: str, column_name: str) -> bool:
-    cur.execute(f"PRAGMA table_info({table_name})")
-    columns = [row[1] for row in cur.fetchall()]
-    return column_name in columns
-
-
-def normalize_phone(phone: str) -> str:
-    if not phone:
-        return ""
-    value = phone.strip()
-    has_plus = value.startswith("+")
-    digits = re.sub(r"\D", "", value)
-    if not digits:
-        return ""
-    return f"+{digits}" if has_plus else digits
-
-
-def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
-    balance = get_tutor_balance(tutor_user_id)
-    target = 1000
-    remaining = max(0, target - balance)
-    return balance, target, remaining
-
-
-def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
-    balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
-    return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
-
-
-def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
-    return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
-
-
-def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
-    balance, target, remaining = get_tutor_withdraw_progress(tutor_user_id)
-    if remaining > 0:
-        if lang == "ua":
-            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
-        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
-    if lang == "ua":
-        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
-    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
 
 def init_db():
     conn = db()
@@ -1598,7 +1496,7 @@ def tutor_menu(user_id: int, lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["tutor_new_requests_btn"])
     kb.row(TEXTS[lang]["tutor_my_requests_btn"])
-    kb.row(get_tutor_withdraw_button_text(user_id, lang))
+    kb.row(TEXTS[lang]["tutor_withdraw_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1680,18 +1578,6 @@ def build_tutor_requests_keyboard(rows, lang: str):
     return kb
 
 
-def build_new_tutor_requests_keyboard(rows, lang: str):
-    kb = InlineKeyboardMarkup()
-    for row in rows:
-        request_id = row[0]
-        subject = row[3]
-        kb.add(InlineKeyboardButton(
-            f"#{request_id} | {subject}",
-            callback_data=f"open_new_tutor_request:{request_id}"
-        ))
-    return kb
-
-
 def build_tutor_request_actions_keyboard(request_id: int, lang: str):
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
@@ -1703,46 +1589,6 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
         callback_data=f"tutor_file_user:{request_id}"
     ))
     return kb
-
-
-@dp.callback_query_handler(lambda c: c.data and c.data.startswith("open_new_tutor_request:"))
-async def open_new_tutor_request_callback(callback_query: types.CallbackQuery):
-    user_id = callback_query.from_user.id
-    lang = get_user(user_id)["language"] or "ua"
-    sync_user_telegram_name(callback_query.from_user)
-
-    if not is_tutor_user(user_id):
-        await callback_query.answer(TEXTS[lang]["no_access"], show_alert=True)
-        return
-
-    request_id = int(callback_query.data.split(":")[1])
-    request_data = get_request_by_id(request_id)
-
-    if not request_data or request_data.get("assigned_tutor_id") is not None or request_data.get("payment_amount_stars", 0) <= 0:
-        await callback_query.answer(TEXTS[lang]["tutor_take_failed"], show_alert=True)
-        return
-
-    payment_info = "-"
-    if request_data.get("payment_amount_stars", 0) > 0:
-        payment_info = f"{request_data.get('payment_type') or '-'} | {request_data.get('payment_amount_stars')}⭐"
-
-    request_text = (
-        f"{TEXTS[lang]['tutor_request_detail_title']} #{request_id}\n\n"
-        f"{TEXTS[lang]['complaint_user_id']}: {request_data['user_id']}\n"
-        f"{TEXTS[lang]['category_label']}: {request_data.get('category') or '-'}\n"
-        f"{TEXTS[lang]['tutor_subject']}: {request_data.get('subject') or '-'}\n"
-        f"{TEXTS[lang]['tutor_name']}: {request_data.get('client_name') or '-'}\n"
-        f"{TEXTS[lang]['tutor_phone']}: {request_data.get('phone') or '-'}\n"
-        f"{TEXTS[lang]['level_label']}: {request_data.get('level') or '-'}\n"
-        f"{TEXTS[lang]['goal_label']}: {request_data.get('goal') or '-'}\n"
-        f"{TEXTS[lang]['preferred_time_label']}: {request_data.get('preferred_time') or '-'}\n"
-        f"{TEXTS[lang]['format_label']}: {request_data.get('lesson_format') or '-'}\n"
-        f"Payment: {payment_info}\n"
-        f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}"
-    )
-
-    await callback_query.message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
-    await callback_query.answer()
 
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
@@ -2111,23 +1957,7 @@ async def menu(message: types.Message):
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
         return
 
-    if text == TEXTS[lang]["premium_menu_btn"]:
-        user_temp.pop(message.from_user.id, None)
-        user_state[message.from_user.id] = "premium_profile_screen"
-        await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-        await bot.send_invoice(
-            chat_id=message.chat.id,
-            title="Premium Profile Payment",
-            description="Unlimited tasks for one month",
-            payload="premium_profile_payment",
-            provider_token="",
-            currency="XTR",
-            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
-            start_parameter="premium_profile"
-        )
-        return
-
-    if text == TEXTS[lang]["my_requests_btn"] and not is_tutor_user(message.from_user.id):
+    if text == TEXTS[lang]["my_requests_btn"]:
         user_temp.pop(message.from_user.id, None)
         requests = get_user_requests(message.from_user.id)
         if not requests:
@@ -2154,6 +1984,12 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
+        user = get_user(message.from_user.id)
+        if not (user.get("phone") or ""):
+            user_state[message.from_user.id] = "start_phone_wait"
+            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+            return
+
         user_temp[message.from_user.id] = {}
         user_state[message.from_user.id] = "tutor_category_wait"
         await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
@@ -2376,13 +2212,19 @@ async def menu(message: types.Message):
         d = user_temp.get(message.from_user.id, {})
         user_profile = get_user(message.from_user.id)
         client_name = user_profile.get("full_name") or get_display_name_for_user(message.from_user.id)
+        phone_value = (user_profile.get("phone") or "").strip()
+
+        if not phone_value:
+            user_state[message.from_user.id] = "start_phone_wait"
+            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+            return
 
         request_id = save_tutor_request(
             user_id=message.from_user.id,
             category=d.get("category", ""),
             subject=d.get("subject", ""),
             client_name=client_name,
-            phone=user_profile.get("phone", ""),
+            phone=phone_value,
             level=d.get("level", ""),
             goal=d.get("goal", ""),
             preferred_time=d.get("preferred_time", ""),
@@ -2662,7 +2504,7 @@ async def menu(message: types.Message):
             await message.answer(TEXTS[lang]["admin_panel_title"], reply_markup=admin_menu(lang))
             return
 
-    if is_tutor_withdraw_button_text(text, message.from_user.id, lang):
+    if text == TEXTS[lang]["tutor_withdraw_btn"]:
         if not is_tutor_user(message.from_user.id):
             await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
             return
@@ -2693,7 +2535,7 @@ async def menu(message: types.Message):
         rows = get_unassigned_tutor_requests()
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_new_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
@@ -2719,7 +2561,6 @@ async def menu(message: types.Message):
                 f"Created: {created_at[:16]}"
             )
             await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
-        await message.answer(build_tutor_balance_info_text(message.from_user.id, lang), reply_markup=tutor_menu(message.from_user.id, lang))
         return
 
     if text == TEXTS[lang]["tutor_my_requests_btn"]:
@@ -2730,13 +2571,13 @@ async def menu(message: types.Message):
         rows = get_tutor_assigned_requests(message.from_user.id)
         if not rows:
             await message.answer(
-                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_balance_info_text(message.from_user.id, lang)}",
+                f"{TEXTS[lang]['tutor_no_my_requests']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
             return
 
         await message.answer(
-            TEXTS[lang]["tutor_my_requests_btn"] + ":\n\n" + build_tutor_balance_info_text(message.from_user.id, lang),
+            TEXTS[lang]["tutor_my_requests_btn"] + ":",
             reply_markup=build_tutor_requests_keyboard(rows, lang)
         )
         return
@@ -2821,7 +2662,6 @@ async def on_startup(_):
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
-    await bot.delete_webhook(drop_pending_updates=True)
     await set_bot_commands()
 
     try:
