@@ -60,6 +60,7 @@ TEXTS = {
         "main_menu_hint": "👋 Обери дію",
         "start_phone_request": "📱 Для початку користування ботом поділись своїм номером телефону Telegram.",
         "start_phone_saved": "✅ Номер телефону збережено.",
+        "share_phone_btn": "📱 Поділитися номером",
 
         "task": "Виконати завдання🙏",
         "tutor": "Потрібен репетитор💪",
@@ -186,8 +187,8 @@ TEXTS = {
         "edit_btn": "✏️ Редагувати",
         "request_confirm_text": "Перевір дані заявки перед відправкою:",
         "choose_valid_subject": "Будь ласка, обери предмет кнопкою зі списку.",
-        "categories_title": "📚 Обери категорію предмета:",
-        "tutor_subject_title": "Вибери предмет з якого тобі потрібен репетитор:",
+        "categories_title": "📚 Обери потрібний тобі предмет:",
+        "tutor_subject_title": "📚 Обери потрібний тобі предмет:",
         "ask_level": "Вкажи свій рівень або клас:",
         "ask_goal": "Напиши коротко свою ціль або проблему:",
         "ask_time": "Напиши зручний час для занять:",
@@ -218,6 +219,7 @@ TEXTS = {
         "main_menu_hint": "👋 Выберите действие",
         "start_phone_request": "📱 Для начала пользования ботом поделись своим номером телефона Telegram.",
         "start_phone_saved": "✅ Номер телефона сохранён.",
+        "share_phone_btn": "📱 Поделиться номером",
 
         "task": "Выполнить задание🙏",
         "tutor": "Нужен репетитор💪",
@@ -344,8 +346,8 @@ TEXTS = {
         "edit_btn": "✏️ Редактировать",
         "request_confirm_text": "Проверь данные заявки перед отправкой:",
         "choose_valid_subject": "Пожалуйста, выбери предмет кнопкой из списка.",
-        "categories_title": "📚 Выбери категорию предмета:",
-        "tutor_subject_title": "Выбери предмет, по которому тебе нужен репетитор:",
+        "categories_title": "📚 Выбери нужный тебе предмет:",
+        "tutor_subject_title": "📚 Выбери нужный тебе предмет:",
         "ask_level": "Укажи свой уровень или класс:",
         "ask_goal": "Напиши кратко свою цель или проблему:",
         "ask_time": "Напиши удобное время для занятий:",
@@ -607,10 +609,23 @@ def get_user(user_id: int):
 def detect_language_code(language_code: str):
     if not language_code:
         return "ua"
-    code = language_code.lower()
+
+    code = language_code.lower().replace("-", "_")
+    if code.startswith("uk"):
+        return "ua"
     if code.startswith("ru"):
         return "ru"
-    return "ua"
+    if code.startswith("en"):
+        return "en"
+
+    for supported in LANG_NAMES.keys():
+        if supported in {"ua", "ru", "en"}:
+            continue
+        if code == supported or code.startswith(f"{supported}_"):
+            return supported
+
+    return "en"
+
 
 
 def set_user_language(user_id: int, language: str, manual: bool = False):
@@ -1489,7 +1504,7 @@ def back_menu(lang: str = "ua"):
 
 def get_start_phone_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(KeyboardButton("📱 Поділитися номером", request_contact=True))
+    kb.row(KeyboardButton(TEXTS[lang]["share_phone_btn"], request_contact=True))
     return kb
 
 
@@ -1549,19 +1564,90 @@ def tutor_menu(user_id: int, lang: str = "ua"):
     return kb
 
 
-SUBJECT_CATEGORIES = {
-    "📚 Предмети": [
+TUTOR_SUBJECTS = {
+    "ua": [
         "Математика",
-        "Англійська",
+        "Англійська мова",
+        "Фізика",
+        "Хімія",
+        "Рідна мова / література",
+        "Біологія",
+        "Інформатика",
+        "Програмування",
+        "Німецька мова",
+        "Французька мова",
+        "Іспанська мова",
+        "Історія",
+        "Географія",
+        "Економіка",
+        "Статистика",
+        "Бухгалтерський облік",
+        "Музика",
+        "Фортепіано",
+        "Гітара",
+        "Мистецтво",
+    ],
+    "ru": [
+        "Математика",
+        "Английский язык",
+        "Физика",
+        "Химия",
+        "Родной язык / литература",
+        "Биология",
+        "Информатика",
+        "Программирование",
+        "Немецкий язык",
+        "Французский язык",
+        "Испанский язык",
+        "История",
+        "География",
+        "Экономика",
+        "Статистика",
+        "Бухгалтерский учет",
+        "Музыка",
+        "Фортепиано",
+        "Гитара",
+        "Искусство",
+    ],
+    "en": [
+        "Mathematics",
+        "English language",
+        "Physics",
+        "Chemistry",
+        "Native language / Literature",
+        "Biology",
+        "Computer science",
+        "Programming",
+        "German language",
+        "French language",
+        "Spanish language",
+        "History",
+        "Geography",
+        "Economics",
+        "Statistics",
+        "Accounting",
+        "Music",
+        "Piano",
+        "Guitar",
+        "Art",
     ],
 }
 
 
+def get_subjects_for_lang(lang: str):
+    if lang in TUTOR_SUBJECTS:
+        return TUTOR_SUBJECTS[lang]
+    return TUTOR_SUBJECTS["en"]
+
+
 def get_language_keyboard(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row("🇺🇦 Українська", "🇷🇺 Русский")
+    buttons = list(LANG_BUTTONS.keys())
+    for i in range(0, len(buttons), 2):
+        kb.row(*buttons[i:i + 2])
     kb.row(TEXTS[lang]["back"])
     return kb
+
 
 
 def get_task_menu(lang: str = "ua"):
@@ -1763,9 +1849,15 @@ async def start(message: types.Message):
     ensure_user(message.from_user.id)
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
+    user = get_user(message.from_user.id)
 
-    user_state[message.from_user.id] = "start_phone_wait"
-    await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+    if not user.get("phone"):
+        user_state[message.from_user.id] = "start_phone_wait"
+        await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+        return
+
+    user_state[message.from_user.id] = "main"
+    await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
 
 @dp.message_handler(commands=["myprofile"])
@@ -2012,9 +2104,15 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["tutor"]:
+        user = get_user(message.from_user.id)
+        if not (user.get("phone") or ""):
+            user_state[message.from_user.id] = "start_phone_wait"
+            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+            return
+
         user_temp[message.from_user.id] = {}
-        user_state[message.from_user.id] = "tutor_category_wait"
-        await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+        user_state[message.from_user.id] = "tutor_subject_wait"
+        await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
         return
 
     # ---------------------------
@@ -2147,26 +2245,17 @@ async def menu(message: types.Message):
         return
 
     if state == "tutor_category_wait":
-        if text not in SUBJECT_CATEGORIES:
-            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
-            return
-
-        user_temp[message.from_user.id] = {"category": text}
         user_state[message.from_user.id] = "tutor_subject_wait"
-        await message.answer(
-            TEXTS[lang]["tutor_subject_title"],
-            reply_markup=get_tutor_subjects_menu(text, lang)
-        )
+        await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
         return
 
     if state == "tutor_subject_wait":
-        selected_category = user_temp.get(message.from_user.id, {}).get("category")
-        valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
+        valid_subjects = get_subjects_for_lang(lang)
 
         if text not in valid_subjects:
             await message.answer(
                 TEXTS[lang]["choose_valid_subject"],
-                reply_markup=get_tutor_subjects_menu(selected_category, lang)
+                reply_markup=get_tutor_subjects_menu(lang)
             )
             return
 
@@ -2223,9 +2312,9 @@ async def menu(message: types.Message):
 
     if state == "tutor_confirm_wait":
         if text == TEXTS[lang]["edit_btn"]:
-            user_state[message.from_user.id] = "tutor_category_wait"
+            user_state[message.from_user.id] = "tutor_subject_wait"
             user_temp[message.from_user.id] = {}
-            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+            await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
             return
 
         if text != TEXTS[lang]["confirm_btn"]:
@@ -2235,13 +2324,19 @@ async def menu(message: types.Message):
         d = user_temp.get(message.from_user.id, {})
         user_profile = get_user(message.from_user.id)
         client_name = user_profile.get("full_name") or get_display_name_for_user(message.from_user.id)
+        phone_value = (user_profile.get("phone") or "").strip()
+
+        if not phone_value:
+            user_state[message.from_user.id] = "start_phone_wait"
+            await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
+            return
 
         request_id = save_tutor_request(
             user_id=message.from_user.id,
-            category=d.get("category", ""),
+            category="",
             subject=d.get("subject", ""),
             client_name=client_name,
-            phone=user_profile.get("phone", ""),
+            phone=phone_value,
             level=d.get("level", ""),
             goal=d.get("goal", ""),
             preferred_time=d.get("preferred_time", ""),
