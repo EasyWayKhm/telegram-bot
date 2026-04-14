@@ -381,6 +381,27 @@ def get_telegram_full_name(user: types.User | None) -> str:
     return full_name or (user.username or "")
 
 
+def db():
+    return sqlite3.connect(DB_PATH)
+
+
+def column_exists(cur, table_name: str, column_name: str) -> bool:
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [row[1] for row in cur.fetchall()]
+    return column_name in columns
+
+
+def normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    value = phone.strip()
+    has_plus = value.startswith("+")
+    digits = re.sub(r"\D", "", value)
+    if not digits:
+        return ""
+    return f"+{digits}" if has_plus else digits
+
+
 def init_db():
     conn = db()
     cur = conn.cursor()
@@ -2212,8 +2233,8 @@ async def menu(message: types.Message):
         d = user_temp.get(message.from_user.id, {})
         user_profile = get_user(message.from_user.id)
         client_name = user_profile.get("full_name") or get_display_name_for_user(message.from_user.id)
-        phone_value = (user_profile.get("phone") or "").strip()
 
+        phone_value = (user_profile.get("phone") or "").strip()
         if not phone_value:
             user_state[message.from_user.id] = "start_phone_wait"
             await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
