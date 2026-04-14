@@ -146,7 +146,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Виведення доступне",
         "tutor_panel_withdraw_status_wait": "⏳ Для виведення потрібно ще {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Нові заявки",
-        "tutor_my_requests_btn": "📂 Мої заявки",
+        "tutor_my_requests_btn": "📂 Заявки в роботі",
         "tutor_no_new_requests": "Немає нових заявок для Tutor.",
         "tutor_no_my_requests": "У тебе ще немає заявок у роботі.",
         "tutor_take_request_btn": "✅ Взяти в роботу",
@@ -304,7 +304,7 @@ TEXTS = {
         "tutor_panel_withdraw_status_ready": "✅ Вывод доступен",
         "tutor_panel_withdraw_status_wait": "⏳ Для вывода нужно ещё {remaining}⭐",
         "tutor_new_requests_btn": "🆕 Новые заявки",
-        "tutor_my_requests_btn": "📂 Мои заявки",
+        "tutor_my_requests_btn": "📂 Заявки в работе",
         "tutor_no_new_requests": "Нет новых заявок для Tutor.",
         "tutor_no_my_requests": "У тебя ещё нет заявок в работе.",
         "tutor_take_request_btn": "✅ Взять в работу",
@@ -1476,7 +1476,7 @@ def main_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
     kb.row(TEXTS[lang]["tutor"])
-    kb.row(TEXTS[lang]["my_requests_btn"], TEXTS[lang]["support_btn"])
+    kb.row(TEXTS[lang]["support_btn"])
     kb.row(TEXTS[lang]["menu_btn"])
     return kb
 
@@ -1763,15 +1763,9 @@ async def start(message: types.Message):
     ensure_user(message.from_user.id)
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
-    user = get_user(message.from_user.id)
 
-    if not user.get("phone"):
-        user_state[message.from_user.id] = "start_phone_wait"
-        await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
-        return
-
-    user_state[message.from_user.id] = "main"
-    await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+    user_state[message.from_user.id] = "start_phone_wait"
+    await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
 
 
 @dp.message_handler(commands=["myprofile"])
@@ -2003,20 +1997,6 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "profile_screen"
         await message.answer(build_profile_text(message.from_user.id, lang), reply_markup=profile_menu(lang))
-        return
-
-    if text == TEXTS[lang]["my_requests_btn"]:
-        user_temp.pop(message.from_user.id, None)
-        requests = get_user_requests(message.from_user.id)
-        if not requests:
-            await message.answer(TEXTS[lang]["no_requests"], reply_markup=back_menu(lang))
-            return
-
-        lines = [TEXTS[lang]["orders_history_title"] + ":"]
-        for request_id, subject, status_code, created_at in requests:
-            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
-
-        await message.answer("\n".join(lines), reply_markup=back_menu(lang))
         return
 
     if text == TEXTS[lang]["support_btn"]:
