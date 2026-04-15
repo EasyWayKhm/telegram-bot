@@ -1952,14 +1952,23 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
 async def balance_topup_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
     lang = get_user(user_id)["language"] or "ua"
+
     try:
         amount = int(callback_query.data.split(":", 1)[1])
     except Exception:
         await callback_query.answer(TEXTS[lang]["error_try_again"], show_alert=True)
         return
 
-    await send_balance_topup_invoice(callback_query.message.chat.id, amount, lang)
-    await callback_query.answer()
+    if amount not in TOP_UP_AMOUNT_OPTIONS:
+        await callback_query.answer(TEXTS[lang]["error_try_again"], show_alert=True)
+        return
+
+    try:
+        await send_balance_topup_invoice(user_id, amount, lang)
+        await callback_query.answer()
+    except Exception as e:
+        logging.exception("Failed to send balance top-up invoice: %s", e)
+        await callback_query.answer(TEXTS[lang]["error_try_again"], show_alert=True)
 
 
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
