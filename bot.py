@@ -959,6 +959,32 @@ def build_balance_topup_keyboard():
     return kb
 
 
+def get_balance_topup_menu(lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    row = []
+    for amount in TOP_UP_AMOUNT_OPTIONS:
+        row.append(f"{amount}⭐")
+        if len(row) == 2:
+            kb.row(*row)
+            row = []
+    if row:
+        kb.row(*row)
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def parse_topup_amount_from_text(text_value: str):
+    value = (text_value or "").strip().replace(" ", "")
+    if value.endswith("⭐"):
+        value = value[:-1]
+    if not value.isdigit():
+        return None
+    amount = int(value)
+    if amount not in TOP_UP_AMOUNT_OPTIONS:
+        return None
+    return amount
+
+
 async def send_balance_topup_invoice(chat_id: int, amount: int, lang: str):
     await bot.send_invoice(
         chat_id=chat_id,
@@ -2387,8 +2413,8 @@ async def menu(message: types.Message):
         return
 
     if text == TEXTS[lang]["balance_top_up_btn"]:
-        user_state[message.from_user.id] = "system_menu"
-        await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=build_balance_topup_keyboard())
+        user_state[message.from_user.id] = "balance_top_up_menu"
+        await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=get_balance_topup_menu(lang))
         return
 
     if text == TEXTS[lang]["referral_link_btn"]:
@@ -2447,6 +2473,19 @@ async def menu(message: types.Message):
             user_temp.pop(message.from_user.id, None)
             user_state[message.from_user.id] = "main"
             await message.answer(TEXTS[lang]["admin_login_fail"], reply_markup=main_menu(lang))
+        return
+
+    if state == "balance_top_up_menu":
+        amount = parse_topup_amount_from_text(text)
+        if amount is None:
+            await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=get_balance_topup_menu(lang))
+            return
+
+        try:
+            await send_balance_topup_invoice(message.chat.id, amount, lang)
+        except Exception as e:
+            logging.exception("Failed to send balance top-up invoice: %s", e)
+            await message.answer(TEXTS[lang]["error_try_again"], reply_markup=get_balance_topup_menu(lang))
         return
 
     if state == "tutor_reply_text_wait":
