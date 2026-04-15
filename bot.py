@@ -23,7 +23,9 @@ OWNER_ID = int(os.getenv("OWNER_ID", "510644962"))
 ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "123456")
 DB_PATH = os.getenv("DB_PATH", "bot.db")
-TOP_UP_AMOUNT_OPTIONS = [100, 250, 500, 1000, 2500, 5000, 10000]
+BOT_USERNAME = ""
+TOP_UP_AMOUNT_OPTIONS = [100, 250, 500, 1000, 2500]
+REFERRAL_REWARD_STARS = 250
 
 if not API_TOKEN:
     raise ValueError("API_TOKEN not found. Add it to .env or Railway Variables.")
@@ -383,6 +385,21 @@ TEXTS["ua"].update({
     "balance_top_up_invoice_description": "Поповнення внутрішнього балансу бота",
     "balance_top_up_success": "✅ Баланс успішно поповнено на {amount}⭐.",
     "balance_history_top_up": "Поповнення балансу",
+    "referral_link_btn": "🔗 Реферальне посилання",
+    "referral_link_text": "За кожного користувача, який доєднається до бота за твоїм посиланням тобі буде нараховано 250 зірочок, які ти зможеш витратити для оплати послуг",
+    "referral_link_unavailable": "❌ Не вдалося сформувати реферальне посилання. Спробуй ще раз пізніше.",
+    "referral_reward_received": "🎉 За твоїм реферальним посиланням зареєструвався новий користувач. Тобі нараховано 250⭐.",
+    "admin_balance_btn": "⭐ Змінити баланс",
+    "admin_balance_lookup_prompt": "Введи ID, username або номер телефону користувача:",
+    "admin_balance_amount_prompt": "Введи зміну балансу у зірочках. Приклади: 250, -250 або =1000",
+    "admin_balance_user_found": "Користувача знайдено",
+    "admin_balance_changed": "✅ Баланс користувача оновлено.",
+    "admin_balance_notification": "💬 Адміністратор змінив твій баланс на {amount}⭐. Поточний баланс: {balance}⭐",
+    "admin_balance_user_not_found": "❌ Користувача не знайдено за цими даними.",
+    "admin_balance_invalid_amount": "❌ Некоректне значення. Введи 250, -250 або =1000",
+    "admin_balance_current": "Поточний баланс",
+    "telegram_username_label": "Username",
+    "referrer_label": "Запросив",
 })
 
 TEXTS["ru"].update({
@@ -394,6 +411,21 @@ TEXTS["ru"].update({
     "balance_top_up_invoice_description": "Пополнение внутреннего баланса бота",
     "balance_top_up_success": "✅ Баланс успешно пополнен на {amount}⭐.",
     "balance_history_top_up": "Пополнение баланса",
+    "referral_link_btn": "🔗 Реферальная ссылка",
+    "referral_link_text": "За каждого пользователя, который присоединится к боту по твоей ссылке тебе будет начислено 250 звёздочек, которые ты сможешь потратить на оплату услуг",
+    "referral_link_unavailable": "❌ Не удалось сформировать реферальную ссылку. Попробуй ещё раз позже.",
+    "referral_reward_received": "🎉 По твоей реферальной ссылке зарегистрировался новый пользователь. Тебе начислено 250⭐.",
+    "admin_balance_btn": "⭐ Изменить баланс",
+    "admin_balance_lookup_prompt": "Введи ID, username или номер телефона пользователя:",
+    "admin_balance_amount_prompt": "Введи изменение баланса в звёздочках. Примеры: 250, -250 или =1000",
+    "admin_balance_user_found": "Пользователь найден",
+    "admin_balance_changed": "✅ Баланс пользователя обновлён.",
+    "admin_balance_notification": "💬 Администратор изменил твой баланс на {amount}⭐. Текущий баланс: {balance}⭐",
+    "admin_balance_user_not_found": "❌ Пользователь не найден по этим данным.",
+    "admin_balance_invalid_amount": "❌ Некорректное значение. Введи 250, -250 или =1000",
+    "admin_balance_current": "Текущий баланс",
+    "telegram_username_label": "Username",
+    "referrer_label": "Пригласил",
 })
 
 def get_telegram_full_name(user: types.User | None) -> str:
@@ -423,6 +455,155 @@ def normalize_phone(phone: str) -> str:
     if not digits:
         return ""
     return f"+{digits}" if has_plus else digits
+
+
+def normalize_username(username: str) -> str:
+    value = (username or "").strip()
+    if value.startswith("@"):
+        value = value[1:]
+    return value.lower()
+
+
+def user_exists(user_id: int) -> bool:
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return bool(row)
+
+
+def get_bot_referral_link(user_id: int) -> str:
+    if not BOT_USERNAME:
+        return ""
+    return f"https://t.me/{BOT_USERNAME}?start=ref_{user_id}"
+
+
+def get_start_referrer_id(message: types.Message):
+    args = (message.get_args() or "").strip()
+    if not args.startswith("ref_"):
+        return None
+    value = args[4:].strip()
+    if not value.isdigit():
+        return None
+    return int(value)
+
+
+def referral_already_recorded(referred_user_id: int) -> bool:
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM referrals WHERE referred_user_id = ?", (referred_user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return bool(row)
+
+
+def award_referral_bonus(referrer_user_id: int, referred_user_id: int) -> bool:
+    if not referrer_user_id or referrer_user_id == referred_user_id:
+        return False
+    if referral_already_recorded(referred_user_id):
+        return False
+
+    ensure_user(referrer_user_id)
+    ensure_user(referred_user_id)
+
+    conn = db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO referrals (referrer_user_id, referred_user_id, reward_stars, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (referrer_user_id, referred_user_id, REFERRAL_REWARD_STARS, datetime.now(timezone.utc).isoformat())
+    )
+    inserted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    if not inserted:
+        return False
+
+    add_user_balance(referrer_user_id, REFERRAL_REWARD_STARS, note=f"Referral reward for user #{referred_user_id}")
+    return True
+
+
+def get_referrer_for_user(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT referrer_user_id FROM referrals WHERE referred_user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def set_user_username(user_id: int, username: str | None):
+    ensure_user(user_id)
+    normalized = normalize_username(username or "")
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET telegram_username = ? WHERE user_id = ?", (normalized or None, user_id))
+    conn.commit()
+    conn.close()
+
+
+def find_user_id_by_identifier(identifier: str):
+    value = (identifier or "").strip()
+    if not value:
+        return None
+
+    conn = db()
+    cur = conn.cursor()
+
+    if value.isdigit():
+        cur.execute("SELECT user_id FROM users WHERE user_id = ?", (int(value),))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    normalized_phone = normalize_phone(value)
+    if normalized_phone:
+        cur.execute("SELECT user_id FROM users WHERE phone = ?", (normalized_phone,))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    username = normalize_username(value)
+    if username:
+        cur.execute("SELECT user_id FROM users WHERE lower(COALESCE(telegram_username, '')) = ?", (username,))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    conn.close()
+    return None
+
+
+def set_user_balance(user_id: int, new_balance: int):
+    ensure_user(user_id)
+    new_balance = max(0, int(new_balance))
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET user_balance_stars = ? WHERE user_id = ?", (new_balance, user_id))
+    conn.commit()
+    conn.close()
+    return new_balance
+
+
+def parse_balance_change_input(text_value: str):
+    value = (text_value or "").strip().replace(" ", "")
+    if not value:
+        return None
+    if value.startswith("="):
+        target = value[1:]
+        if target.lstrip("-").isdigit():
+            return ("set", int(target))
+        return None
+    if value.lstrip("+-").isdigit():
+        return ("delta", int(value))
+    return None
 
 
 def get_user_balance(user_id: int) -> int:
@@ -499,6 +680,7 @@ def init_db():
             is_tutor INTEGER DEFAULT 0,
             phone TEXT,
             full_name TEXT,
+            telegram_username TEXT,
             user_balance_stars INTEGER DEFAULT 0,
             premium_until TEXT,
             pending_payment TEXT,
@@ -569,6 +751,16 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referrer_user_id INTEGER NOT NULL,
+            referred_user_id INTEGER NOT NULL UNIQUE,
+            reward_stars INTEGER NOT NULL DEFAULT 250,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS tutor_balances (
             tutor_user_id INTEGER PRIMARY KEY,
             balance_stars INTEGER NOT NULL DEFAULT 0
@@ -594,6 +786,9 @@ def init_db():
 
     if not column_exists(cur, "users", "full_name"):
         cur.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
+
+    if not column_exists(cur, "users", "telegram_username"):
+        cur.execute("ALTER TABLE users ADD COLUMN telegram_username TEXT")
 
     if not column_exists(cur, "users", "user_balance_stars"):
         cur.execute("ALTER TABLE users ADD COLUMN user_balance_stars INTEGER DEFAULT 0")
@@ -627,10 +822,10 @@ def ensure_user(user_id: int):
         cur.execute("""
             INSERT INTO users (
                 user_id, language, manual_language, is_admin, is_tutor,
-                phone, full_name, user_balance_stars, premium_until, pending_payment,
+                phone, full_name, telegram_username, user_balance_stars, premium_until, pending_payment,
                 premium_remind_3days_sent, premium_expired_sent
             )
-            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, 0, NULL, NULL, 0, 0)
+            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, NULL, 0, NULL, NULL, 0, 0)
         """, (user_id,))
         conn.commit()
 
@@ -643,7 +838,7 @@ def get_user(user_id: int):
     cur = conn.cursor()
     cur.execute("""
         SELECT user_id, language, manual_language, is_admin, is_tutor,
-               phone, full_name, user_balance_stars, premium_until, pending_payment,
+               phone, full_name, telegram_username, user_balance_stars, premium_until, pending_payment,
                premium_remind_3days_sent, premium_expired_sent
         FROM users
         WHERE user_id = ?
@@ -659,11 +854,12 @@ def get_user(user_id: int):
         "is_tutor": bool(row[4]),
         "phone": row[5],
         "full_name": row[6],
-        "user_balance_stars": int(row[7] or 0),
-        "premium_until": row[8],
-        "pending_payment": row[9],
-        "premium_remind_3days_sent": bool(row[10]),
-        "premium_expired_sent": bool(row[11]),
+        "telegram_username": row[7],
+        "user_balance_stars": int(row[8] or 0),
+        "premium_until": row[9],
+        "pending_payment": row[10],
+        "premium_remind_3days_sent": bool(row[11]),
+        "premium_expired_sent": bool(row[12]),
     }
 
 
@@ -726,6 +922,7 @@ def sync_user_telegram_name(user: types.User | None):
     full_name = get_telegram_full_name(user)
     if full_name:
         set_user_full_name(user.id, full_name)
+    set_user_username(user.id, getattr(user, "username", None))
 
 
 def resolve_user_language(message: types.Message):
@@ -1278,6 +1475,11 @@ def try_award_tutor_for_request(request_id: int):
         request_id=request_id,
         note=f"50% від оплати за заявку #{request_id}"
     )
+    add_user_balance(
+        user_id=request_data["assigned_tutor_id"],
+        amount_stars=reward,
+        note=f"Tutor reward for request #{request_id}"
+    )
 
     conn = db()
     cur = conn.cursor()
@@ -1493,8 +1695,15 @@ def build_profile_text(user_id: int, lang: str):
     if user.get("full_name"):
         lines.append(f"{TEXTS[lang]['tutor_name']}: {user['full_name']}")
 
+    if user.get("telegram_username"):
+        lines.append(f"{TEXTS[lang]['telegram_username_label']}: @{user['telegram_username']}")
+
     if user.get("phone"):
         lines.append(f"{TEXTS[lang]['tutor_phone']}: {user['phone']}")
+
+    referrer_id = get_referrer_for_user(user_id)
+    if referrer_id:
+        lines.append(f"{TEXTS[lang]['referrer_label']}: {referrer_id}")
 
     tutor_profile = get_tutor_profile(user_id)
     if tutor_profile:
@@ -1593,7 +1802,7 @@ def get_start_phone_menu(lang: str = "ua"):
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["my_profile_btn"])
-    kb.row(TEXTS[lang]["balance_top_up_btn"])
+    kb.row(TEXTS[lang]["balance_top_up_btn"], TEXTS[lang]["referral_link_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
@@ -1603,6 +1812,7 @@ def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False
 
     if is_admin:
         kb.row(TEXTS[lang]["admin_profile_btn"])
+        kb.row(TEXTS[lang]["admin_balance_btn"])
         kb.row(TEXTS[lang]["admin_logout_btn"])
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
@@ -1621,7 +1831,7 @@ def premium_menu(lang: str = "ua"):
 
 def profile_menu(lang: str = "ua"):
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row(TEXTS[lang]["balance_top_up_btn"])
+    kb.row(TEXTS[lang]["balance_top_up_btn"], TEXTS[lang]["referral_link_btn"])
     kb.row(TEXTS[lang]["change_language_btn"])
     kb.row(TEXTS[lang]["profile_upgrade_btn"])
     kb.row(TEXTS[lang]["back"])
@@ -1634,6 +1844,7 @@ def admin_menu(lang: str = "ua"):
     kb.row(TEXTS[lang]["admin_premium_users_btn"])
     kb.row(TEXTS[lang]["admin_search_btn"])
     kb.row(TEXTS[lang]["admin_reply_btn"])
+    kb.row(TEXTS[lang]["admin_balance_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
@@ -1872,9 +2083,18 @@ async def tutor_file_user_callback(callback_query: types.CallbackQuery):
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
+    is_new_user = not user_exists(message.from_user.id)
     ensure_user(message.from_user.id)
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
+
+    referrer_id = get_start_referrer_id(message)
+    if is_new_user and referrer_id and award_referral_bonus(referrer_id, message.from_user.id):
+        try:
+            ref_lang = get_user(referrer_id)["language"] or "ua"
+            await bot.send_message(referrer_id, TEXTS[ref_lang]["referral_reward_received"])
+        except Exception as e:
+            logging.warning(f"Failed to notify referrer {referrer_id}: {e}")
 
     user_state[message.from_user.id] = "start_phone_wait"
     await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
@@ -1888,7 +2108,7 @@ async def cmd_myprofile(message: types.Message):
         return
     user_state[message.from_user.id] = "system_menu"
     await message.answer(
-        TEXTS[lang]["system_menu_title"],
+        build_profile_text(message.from_user.id, lang),
         reply_markup=system_menu(
             lang,
             is_admin=is_admin_user(message.from_user.id),
@@ -2160,6 +2380,22 @@ async def menu(message: types.Message):
     if text == TEXTS[lang]["balance_top_up_btn"]:
         user_state[message.from_user.id] = "system_menu"
         await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=build_balance_topup_keyboard())
+        return
+
+    if text == TEXTS[lang]["referral_link_btn"]:
+        referral_link = get_bot_referral_link(message.from_user.id)
+        if not referral_link:
+            await message.answer(TEXTS[lang]["referral_link_unavailable"], reply_markup=system_menu(
+                lang,
+                is_admin=is_admin_user(message.from_user.id),
+                is_tutor=is_tutor_user(message.from_user.id)
+            ))
+            return
+        await message.answer(f"{referral_link}\n\n{TEXTS[lang]['referral_link_text']}", reply_markup=system_menu(
+            lang,
+            is_admin=is_admin_user(message.from_user.id),
+            is_tutor=is_tutor_user(message.from_user.id)
+        ))
         return
 
     if text == TEXTS[lang]["support_btn"]:
@@ -2452,6 +2688,72 @@ async def menu(message: types.Message):
         await message.answer(TEXTS[lang]["tutor_request_sent"], reply_markup=main_menu(lang))
         return
 
+    if state == "admin_balance_lookup_wait":
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        target_user_id = find_user_id_by_identifier(text)
+        if not target_user_id:
+            await message.answer(TEXTS[lang]["admin_balance_user_not_found"], reply_markup=admin_menu(lang))
+            user_state[message.from_user.id] = "admin_panel"
+            return
+
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["balance_target_user_id"] = target_user_id
+        target_user = get_user(target_user_id)
+        username_value = target_user.get("telegram_username")
+        username_line = f"@{username_value}" if username_value else "-"
+        user_state[message.from_user.id] = "admin_balance_amount_wait"
+        await message.answer(
+            f"{TEXTS[lang]['admin_balance_user_found']}: {target_user_id}\n"
+            f"{TEXTS[lang]['admin_balance_current']}: {get_user_balance(target_user_id)}⭐\n"
+            f"{TEXTS[lang]['tutor_name']}: {target_user.get('full_name') or '-'}\n"
+            f"{TEXTS[lang]['tutor_phone']}: {target_user.get('phone') or '-'}\n"
+            f"{TEXTS[lang]['telegram_username_label']}: {username_line}\n\n"
+            f"{TEXTS[lang]['admin_balance_amount_prompt']}",
+            reply_markup=back_menu(lang)
+        )
+        return
+
+    if state == "admin_balance_amount_wait":
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        target_user_id = user_temp.get(message.from_user.id, {}).get("balance_target_user_id")
+        operation = parse_balance_change_input(text)
+        if not target_user_id or not operation:
+            await message.answer(TEXTS[lang]["admin_balance_invalid_amount"], reply_markup=back_menu(lang))
+            return
+
+        mode, amount_value = operation
+        old_balance = get_user_balance(target_user_id)
+        if mode == "set":
+            new_balance = set_user_balance(target_user_id, amount_value)
+        else:
+            new_balance = add_user_balance(target_user_id, amount_value, note="Admin balance change")
+        diff = new_balance - old_balance
+
+        target_lang = get_user(target_user_id)["language"] or lang
+        try:
+            await bot.send_message(
+                target_user_id,
+                TEXTS[target_lang]["admin_balance_notification"].format(amount=diff, balance=new_balance)
+            )
+        except Exception as e:
+            logging.warning(f"Failed to notify user about balance change: {e}")
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "admin_panel"
+        await message.answer(
+            f"{TEXTS[lang]['admin_balance_changed']}\n"
+            f"ID: {target_user_id}\n"
+            f"{TEXTS[lang]['admin_balance_current']}: {new_balance}⭐",
+            reply_markup=admin_menu(lang)
+        )
+        return
+
     if state == "admin_search_wait":
         if not text.isdigit():
             await message.answer(TEXTS[lang]["admin_search_prompt"], reply_markup=back_menu(lang))
@@ -2484,8 +2786,12 @@ async def menu(message: types.Message):
         ]
 
         target_user = get_user(target_user_id)
+        lines.append(f"{TEXTS[lang]['balance_label']}: {get_user_balance(target_user_id)}⭐")
         if target_user.get("full_name"):
             lines.append(f"{TEXTS[lang]['tutor_name']}: {target_user['full_name']}")
+
+        if target_user.get("telegram_username"):
+            lines.append(f"{TEXTS[lang]['telegram_username_label']}: @{target_user['telegram_username']}")
 
         if target_user.get("phone"):
             lines.append(f"{TEXTS[lang]['tutor_phone']}: {target_user['phone']}")
@@ -2695,6 +3001,15 @@ async def menu(message: types.Message):
         await message.answer(TEXTS[lang]["admin_reply_prompt"], reply_markup=back_menu(lang))
         return
 
+    if text == TEXTS[lang]["admin_balance_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_balance_lookup_wait"
+        await message.answer(TEXTS[lang]["admin_balance_lookup_prompt"], reply_markup=back_menu(lang))
+        return
+
     if text == TEXTS[lang]["admin_panel_title"]:
         if is_admin_user(message.from_user.id):
             user_state[message.from_user.id] = "admin_panel"
@@ -2860,10 +3175,17 @@ async def set_bot_commands():
 
 
 async def on_startup(_):
+    global BOT_USERNAME
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
     await set_bot_commands()
+
+    try:
+        me = await bot.get_me()
+        BOT_USERNAME = me.username or ""
+    except Exception as e:
+        logging.warning(f"Не вдалося отримати username бота: {e}")
 
     try:
         await check_premium_reminders()
