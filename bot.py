@@ -1,10 +1,7 @@
-import json
 import logging
 import os
 import re
 import sqlite3
-import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
@@ -26,6 +23,9 @@ OWNER_ID = int(os.getenv("OWNER_ID", "510644962"))
 ADMIN_LOGIN = os.getenv("ADMIN_LOGIN", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "123456")
 DB_PATH = os.getenv("DB_PATH", "bot.db")
+BOT_USERNAME = ""
+TOP_UP_AMOUNT_OPTIONS = [100, 250, 500, 1000, 2500, 5000, 10000]
+REFERRAL_REWARD_STARS = 250
 
 if not API_TOKEN:
     raise ValueError("API_TOKEN not found. Add it to .env or Railway Variables.")
@@ -376,745 +376,61 @@ TEXTS = {
     },
 }
 
-
 TEXTS["ua"].update({
     "share_phone_btn": "📱 Поділитися номером",
-    "payment_label": "Оплата",
-    "created_label": "Створено",
-    "sender_user_label": "Користувач",
-    "sender_tutor_label": "Tutor",
-    "withdraw_left_to_earn": "До виведення залишилось заробити: {remaining}⭐",
-    "withdraw_already_available": "Виведення вже доступне.",
-    "popular_subjects_category": "Популярні предмети",
-    "reply_send_error": "❌ Не вдалося відправити повідомлення: {error}",
-    "premium_invoice_title": "Оплата Premium профілю",
-    "premium_invoice_description": "Необмежена кількість завдань на один місяць",
-    "premium_invoice_label": "Premium профіль",
-    "task_invoice_title": "Оплата одного завдання",
-    "task_invoice_description": "Оплата за одне завдання",
-    "task_invoice_label": "Одне завдання",
-    "complex_invoice_title": "Оплата комплексної роботи",
-    "complex_invoice_description": "Оплата за комплексне виконання роботи",
-    "complex_invoice_label": "Комплексна робота",
-    "payment_type_task_label": "Одне завдання",
-    "payment_type_complex_label": "Комплексне виконання роботи",
-    "payment_type_premium_label": "Преміум профіль",
-    "tutor_subject_title": "📚 Вибери потрібний предмет",
-    "categories_title": "📚 Вибери потрібний предмет",
+    "balance_label": "Баланс",
+    "balance_top_up_btn": "💳 Поповнити баланс",
+    "balance_top_up_title": "💳 Обери суму поповнення балансу:",
+    "balance_top_up_invoice_title": "Поповнення балансу",
+    "balance_top_up_invoice_description": "Поповнення внутрішнього балансу бота",
+    "balance_top_up_success": "✅ Баланс успішно поповнено на {amount}⭐.",
+    "balance_payment_used": "✅ Послугу оплачено з внутрішнього балансу.",
+    "balance_not_enough": "❌ На внутрішньому балансі недостатньо зірочок. Відкриваю оплату через Telegram Stars.",
+    "balance_history_top_up": "Поповнення балансу",
+    "referral_link_btn": "🔗 Реферальне посилання",
+    "referral_link_text": "За кожного користувача, який доєднається до бота за твоїм посиланням, тобі буде нараховано 250 зірочок, які ти зможеш витратити для оплати послуг.",
+    "referral_link_unavailable": "❌ Не вдалося сформувати реферальне посилання. Перезапусти бота і спробуй ще раз.",
+    "referral_reward_received": "🎉 За твоїм реферальним посиланням зареєструвався новий користувач. Тобі нараховано 250⭐.",
+    "admin_balance_btn": "⭐ Змінити баланс",
+    "admin_balance_lookup_prompt": "Введи ID, username або номер телефону користувача:",
+    "admin_balance_amount_prompt": "Введи зміну балансу у зірочках. Приклади: 250, -250 або =1000",
+    "admin_balance_user_found": "Користувача знайдено",
+    "admin_balance_changed": "✅ Баланс користувача оновлено.",
+    "admin_balance_notification": "💬 Адміністратор змінив твій баланс на {amount}⭐. Поточний баланс: {balance}⭐",
+    "admin_balance_user_not_found": "❌ Користувача не знайдено за цими даними.",
+    "admin_balance_invalid_amount": "❌ Некоректне значення. Введи 250, -250 або =1000",
+    "admin_balance_current": "Поточний баланс",
+    "telegram_username_label": "Username",
+    "referrer_label": "Запросив",
 })
 
 TEXTS["ru"].update({
     "share_phone_btn": "📱 Поделиться номером",
-    "payment_label": "Оплата",
-    "created_label": "Создано",
-    "sender_user_label": "Пользователь",
-    "sender_tutor_label": "Tutor",
-    "withdraw_left_to_earn": "До вывода осталось заработать: {remaining}⭐",
-    "withdraw_already_available": "Вывод уже доступен.",
-    "popular_subjects_category": "Популярные предметы",
-    "reply_send_error": "❌ Не удалось отправить сообщение: {error}",
-    "premium_invoice_title": "Оплата Premium профиля",
-    "premium_invoice_description": "Неограниченное количество заданий на один месяц",
-    "premium_invoice_label": "Premium профиль",
-    "task_invoice_title": "Оплата одного задания",
-    "task_invoice_description": "Оплата за одно задание",
-    "task_invoice_label": "Одно задание",
-    "complex_invoice_title": "Оплата комплексной работы",
-    "complex_invoice_description": "Оплата за комплексное выполнение работы",
-    "complex_invoice_label": "Комплексная работа",
-    "payment_type_task_label": "Одно задание",
-    "payment_type_complex_label": "Комплексное выполнение работы",
-    "payment_type_premium_label": "Премиум профиль",
-    "tutor_subject_title": "📚 Выбери нужный предмет",
-    "categories_title": "📚 Выбери нужный предмет",
+    "balance_label": "Баланс",
+    "balance_top_up_btn": "💳 Пополнить баланс",
+    "balance_top_up_title": "💳 Выбери сумму пополнения баланса:",
+    "balance_top_up_invoice_title": "Пополнение баланса",
+    "balance_top_up_invoice_description": "Пополнение внутреннего баланса бота",
+    "balance_top_up_success": "✅ Баланс успешно пополнен на {amount}⭐.",
+    "balance_payment_used": "✅ Услуга оплачена с внутреннего баланса.",
+    "balance_not_enough": "❌ На внутреннем балансе недостаточно звёзд. Открываю оплату через Telegram Stars.",
+    "balance_history_top_up": "Пополнение баланса",
+    "referral_link_btn": "🔗 Реферальная ссылка",
+    "referral_link_text": "За каждого пользователя, который присоединится к боту по твоей ссылке, тебе будет начислено 250 звёздочек, которые ты сможешь потратить на оплату услуг.",
+    "referral_link_unavailable": "❌ Не удалось сформировать реферальную ссылку. Перезапусти бота и попробуй ещё раз.",
+    "referral_reward_received": "🎉 По твоей реферальной ссылке зарегистрировался новый пользователь. Тебе начислено 250⭐.",
+    "admin_balance_btn": "⭐ Изменить баланс",
+    "admin_balance_lookup_prompt": "Введи ID, username или номер телефона пользователя:",
+    "admin_balance_amount_prompt": "Введи изменение баланса в звёздочках. Примеры: 250, -250 или =1000",
+    "admin_balance_user_found": "Пользователь найден",
+    "admin_balance_changed": "✅ Баланс пользователя обновлён.",
+    "admin_balance_notification": "💬 Администратор изменил твой баланс на {amount}⭐. Текущий баланс: {balance}⭐",
+    "admin_balance_user_not_found": "❌ Пользователь не найден по этим данным.",
+    "admin_balance_invalid_amount": "❌ Некорректное значение. Введи 250, -250 или =1000",
+    "admin_balance_current": "Текущий баланс",
+    "telegram_username_label": "Username",
+    "referrer_label": "Пригласил",
 })
-
-TEXTS["en"] = {
-    "language_text": "👋 Choose the bot language",
-    "main_menu_hint": "👋 Choose an action",
-    "start_phone_request": "📱 To start using the bot, share your Telegram phone number.",
-    "start_phone_saved": "✅ Phone number saved.",
-    "share_phone_btn": "📱 Share phone number",
-    "task": "Complete a task🙏",
-    "tutor": "Need a tutor💪",
-    "my_requests_btn": "📂 My requests",
-    "support_btn": "🆘 Support",
-    "menu_btn": "👤 My account",
-    "back": "🏠 Main menu",
-    "one": "Single task",
-    "complex": "Complex assignment",
-    "premium_profile": "Premium profile",
-    "premium_profile_info": "For a full month, you get unlimited tasks in any school subject.",
-    "profile_upgrade_btn": "🚀 Upgrade profile to Premium",
-    "choose_service": "👇 Choose a service",
-    "file_sent": "📩 File sent to the administrator.",
-    "file_sent_to_tutor": "📩 File sent to the Tutor.",
-    "no_payment": "❌ Payment is required first.",
-    "send_file_now": "📎 Now you can send the file.",
-    "pay_success_task": "✅ Payment of 250⭐ was successful.",
-    "pay_success_complex": "✅ Payment of 500⭐ was successful.",
-    "pay_success_premium_profile": "✅ Payment of 2500⭐ for the premium profile was successful.",
-    "premium_profile_activated": "💎 Premium profile activated for 30 days.",
-    "system_menu_title": "👤 My account",
-    "my_profile_btn": "👤 My profile",
-    "premium_menu_btn": "⭐ Premium profile",
-    "tutor_login_btn": "🎓 Log in to Tutor account",
-    "tutor_profile_btn": "📚 Tutor profile",
-    "tutor_logout_btn": "🚪 Log out of Tutor profile",
-    "tutor_logout_success": "✅ You logged out of the Tutor profile.",
-    "admin_login_btn": "🔐 Log in to Admin account",
-    "admin_profile_btn": "🛠 Admin profile",
-    "admin_logout_btn": "🚪 Log out of admin profile",
-    "admin_logout_success": "✅ You logged out of the admin profile.",
-    "profile_title": "👤 My profile",
-    "profile_role": "Profile type",
-    "profile_language": "Bot language",
-    "profile_status": "Status",
-    "profile_until": "Premium active until",
-    "profile_user": "User",
-    "profile_admin": "Administrator",
-    "profile_tutor": "Tutor",
-    "profile_basic": "Basic profile",
-    "profile_premium": "Premium profile",
-    "payments_history_title": "💳 Payment history",
-    "orders_history_title": "📦 Request history",
-    "no_payments_history": "Payment history is empty so far.",
-    "no_requests": "You do not have any requests yet.",
-    "change_language_btn": "🌍 Change language",
-    "complaint_sent": "✅ Message sent to the administrator.",
-    "complaint_header": "🆘 New message",
-    "complaint_user_id": "User ID",
-    "complaint_username": "Username",
-    "complaint_language": "Language",
-    "complaint_profile": "Profile",
-    "complaint_text_label": "Text",
-    "support_text": "🆘 Send your question in one message and the administrator will receive it.",
-    "ask_admin_login": "Enter administrator login:",
-    "ask_admin_password": "Enter administrator password:",
-    "admin_login_success": "✅ Administrator login successful.",
-    "admin_login_fail": "❌ Incorrect login or password.",
-    "admin_panel_title": "🛠 Admin panel",
-    "admin_new_requests_btn": "📥 New requests",
-    "admin_premium_users_btn": "💎 Premium users",
-    "admin_search_btn": "🔎 Search",
-    "admin_reply_btn": "💬 Reply to client",
-    "admin_no_new_requests": "There are no new requests.",
-    "admin_no_premium_users": "There are no active premium users.",
-    "admin_search_prompt": "Enter the user ID:",
-    "admin_reply_prompt": "Enter the user ID you want to reply to:",
-    "admin_reply_text_prompt": "Enter the reply text for the user:",
-    "admin_reply_sent": "✅ Message sent to the user.",
-    "tutor_auth_success": "✅ Tutor login successful.",
-    "tutor_register_success": "✅ Tutor profile created. Login completed.",
-    "tutor_panel_title": "📚 Tutor panel",
-    "tutor_panel_name": "👤 Tutor",
-    "tutor_panel_balance": "💰 Balance",
-    "tutor_panel_withdraw_status_ready": "✅ Withdrawal available",
-    "tutor_panel_withdraw_status_wait": "⏳ You need {remaining}⭐ more before withdrawal",
-    "tutor_new_requests_btn": "🆕 New requests",
-    "tutor_my_requests_btn": "📂 Requests in progress",
-    "tutor_no_new_requests": "There are no new requests for the Tutor.",
-    "tutor_no_my_requests": "You do not have any requests in progress yet.",
-    "tutor_take_request_btn": "✅ Take request",
-    "tutor_take_success": "✅ Request taken into work.",
-    "tutor_take_failed": "⚠️ This request has already been taken by another Tutor.",
-    "tutor_request_taken_user": "✅ Your request has been taken by a Tutor. They can message you here in the chat.",
-    "tutor_request_detail_title": "📄 Request",
-    "tutor_write_user_btn": "💬 Message the user",
-    "tutor_send_file_btn": "📎 Send file to the user",
-    "tutor_reply_text_prompt": "Enter a message for the user:",
-    "tutor_reply_text_sent": "✅ Message sent to the user.",
-    "tutor_send_file_prompt": "Send one file for the user in a single message.",
-    "tutor_send_file_sent": "✅ File sent to the user.",
-    "request_files_title": "📎 Files for the request",
-    "no_request_files": "There are no files for this request yet.",
-    "file_from_user_caption": "📎 File from the user for request",
-    "file_from_tutor_caption": "📎 File from the Tutor for request",
-    "tutor_balance_label": "Balance",
-    "tutor_withdraw_btn": "💸 Withdraw funds",
-    "tutor_enter_card": "Enter the card number for withdrawal:",
-    "tutor_withdraw_sent": "✅ Withdrawal request sent to the administrator.",
-    "tutor_withdraw_not_available": "❌ Withdrawal is available only when the balance reaches 1000⭐.",
-    "tutor_withdraw_balance_info": "💰 Current balance: {balance}⭐",
-    "tutor_withdraw_request_title": "💸 Tutor wants to withdraw funds",
-    "card_number_label": "Card number",
-    "request_status_new": "New",
-    "request_status_accepted": "Accepted",
-    "request_status_in_progress": "In progress",
-    "request_status_done": "Completed",
-    "premium_expire_3days": "⏳ Your premium will expire in 3 days.",
-    "premium_expired": "⚠️ Your premium has ended. The profile is basic again.",
-    "confirm_btn": "✅ Confirm",
-    "edit_btn": "✏️ Edit",
-    "request_confirm_text": "Review the request details before sending:",
-    "choose_valid_subject": "Please choose a subject using the buttons from the list.",
-    "categories_title": "📚 Choose the required subject",
-    "tutor_subject_title": "📚 Choose the required subject",
-    "ask_level": "Enter your level or class:",
-    "ask_goal": "Briefly describe your goal or problem:",
-    "ask_time": "Write a convenient time for lessons:",
-    "ask_format": "Specify the format: online / offline:",
-    "tutor_request_sent": "✅ Request sent to the administrator. You will be contacted.",
-    "tutor_request_header": "📚 New tutor request",
-    "tutor_subject": "Subject",
-    "tutor_name": "Name",
-    "tutor_phone": "Phone",
-    "phone_invalid": "❌ Please enter a valid phone number or press the button.",
-    "no_access": "⛔ Access denied.",
-    "user_not_found": "User not found.",
-    "error_try_again": "Error. Please try again.",
-    "admin_message_prefix": "💬 Message from administrator:\n\n",
-    "new_order_prefix": "📥 New order",
-    "user_id_label": "User ID",
-    "username_label": "Username",
-    "category_label": "Category",
-    "level_label": "Level / class",
-    "goal_label": "Goal / problem",
-    "preferred_time_label": "Preferred time",
-    "format_label": "Format",
-    "status_label": "Status",
-    "user_search_title": "🔎 User",
-    "payment_label": "Payment",
-    "created_label": "Created",
-    "sender_user_label": "User",
-    "sender_tutor_label": "Tutor",
-    "withdraw_left_to_earn": "Left to earn before withdrawal: {remaining}⭐",
-    "withdraw_already_available": "Withdrawal is already available.",
-    "popular_subjects_category": "Popular subjects",
-    "reply_send_error": "❌ Failed to send the message: {error}",
-    "premium_invoice_title": "Premium profile payment",
-    "premium_invoice_description": "Unlimited tasks for one month",
-    "premium_invoice_label": "Premium profile",
-    "task_invoice_title": "Single task payment",
-    "task_invoice_description": "Payment for one task",
-    "task_invoice_label": "Single task",
-    "complex_invoice_title": "Complex work payment",
-    "complex_invoice_description": "Payment for complex work",
-    "complex_invoice_label": "Complex work",
-    "payment_type_task_label": "Single task",
-    "payment_type_complex_label": "Complex assignment",
-    "payment_type_premium_label": "Premium profile",
-}
-
-
-for _lang_code, _extra_texts in {
-    "ua": {
-        "tutor_message_prefix": "💬 Tutor:\n\n",
-        "file_generic_name": "файл",
-    },
-    "ru": {
-        "tutor_message_prefix": "💬 Tutor:\n\n",
-        "file_generic_name": "файл",
-    },
-    "en": {
-        "tutor_message_prefix": "💬 Tutor:\n\n",
-        "file_generic_name": "file",
-    },
-}.items():
-    TEXTS[_lang_code].update(_extra_texts)
-
-SUPPORTED_LANGUAGE_SPECS = [
-    {"code": "ua", "button": "🇺🇦 Українська", "name": "Українська", "telegram_codes": ["uk", "ua"]},
-    {"code": "ru", "button": "🇷🇺 Русский", "name": "Русский", "telegram_codes": ["ru"]},
-    {"code": "en", "button": "🇬🇧 English", "name": "English", "telegram_codes": ["en"]},
-    {"code": "de", "button": "🇩🇪 Deutsch", "name": "Deutsch", "telegram_codes": ["de"]},
-    {"code": "fr", "button": "🇫🇷 Français", "name": "Français", "telegram_codes": ["fr"]},
-    {"code": "it", "button": "🇮🇹 Italiano", "name": "Italiano", "telegram_codes": ["it"]},
-    {"code": "es", "button": "🇪🇸 Español", "name": "Español", "telegram_codes": ["es"]},
-    {"code": "pl", "button": "🇵🇱 Polski", "name": "Polski", "telegram_codes": ["pl"]},
-    {"code": "ro", "button": "🇷🇴 Română", "name": "Română", "telegram_codes": ["ro"]},
-    {"code": "nl", "button": "🇳🇱 Nederlands", "name": "Nederlands", "telegram_codes": ["nl"]},
-    {"code": "tr", "button": "🇹🇷 Türkçe", "name": "Türkçe", "telegram_codes": ["tr"]},
-    {"code": "pt", "button": "🇵🇹 Português", "name": "Português", "telegram_codes": ["pt"]},
-    {"code": "el", "button": "🇬🇷 Ελληνικά", "name": "Ελληνικά", "telegram_codes": ["el"]},
-    {"code": "cs", "button": "🇨🇿 Čeština", "name": "Čeština", "telegram_codes": ["cs"]},
-    {"code": "sv", "button": "🇸🇪 Svenska", "name": "Svenska", "telegram_codes": ["sv"]},
-    {"code": "hu", "button": "🇭🇺 Magyar", "name": "Magyar", "telegram_codes": ["hu"]},
-    {"code": "be", "button": "🇧🇾 Беларуская", "name": "Беларуская", "telegram_codes": ["be"]},
-    {"code": "bg", "button": "🇧🇬 Български", "name": "Български", "telegram_codes": ["bg"]},
-    {"code": "sr", "button": "🇷🇸 Srpski", "name": "Srpski", "telegram_codes": ["sr"]},
-    {"code": "da", "button": "🇩🇰 Dansk", "name": "Dansk", "telegram_codes": ["da"]},
-    {"code": "fi", "button": "🇫🇮 Suomi", "name": "Suomi", "telegram_codes": ["fi"]},
-    {"code": "sk", "button": "🇸🇰 Slovenčina", "name": "Slovenčina", "telegram_codes": ["sk"]},
-    {"code": "no", "button": "🇳🇴 Norsk", "name": "Norsk", "telegram_codes": ["no", "nb", "nn"]},
-    {"code": "hr", "button": "🇭🇷 Hrvatski", "name": "Hrvatski", "telegram_codes": ["hr"]},
-    {"code": "bs", "button": "🇧🇦 Bosanski", "name": "Bosanski", "telegram_codes": ["bs"]},
-    {"code": "sq", "button": "🇦🇱 Shqip", "name": "Shqip", "telegram_codes": ["sq"]},
-    {"code": "lt", "button": "🇱🇹 Lietuvių", "name": "Lietuvių", "telegram_codes": ["lt"]},
-    {"code": "sl", "button": "🇸🇮 Slovenščina", "name": "Slovenščina", "telegram_codes": ["sl"]},
-    {"code": "lv", "button": "🇱🇻 Latviešu", "name": "Latviešu", "telegram_codes": ["lv"]},
-    {"code": "et", "button": "🇪🇪 Eesti", "name": "Eesti", "telegram_codes": ["et"]},
-    {"code": "mk", "button": "🇲🇰 Македонски", "name": "Македонски", "telegram_codes": ["mk"]},
-    {"code": "mt", "button": "🇲🇹 Malti", "name": "Malti", "telegram_codes": ["mt"]},
-    {"code": "is", "button": "🇮🇸 Íslenska", "name": "Íslenska", "telegram_codes": ["is"]},
-    {"code": "ga", "button": "🇮🇪 Gaeilge", "name": "Gaeilge", "telegram_codes": ["ga"]},
-    {"code": "cy", "button": "🏴 Cymraeg", "name": "Cymraeg", "telegram_codes": ["cy"]},
-    {"code": "lb", "button": "🇱🇺 Lëtzebuergesch", "name": "Lëtzebuergesch", "telegram_codes": ["lb"]},
-]
-
-LANG_BUTTONS = {spec["button"]: spec["code"] for spec in SUPPORTED_LANGUAGE_SPECS}
-LANG_NAMES = {spec["code"]: spec["name"] for spec in SUPPORTED_LANGUAGE_SPECS}
-SUPPORTED_LANGUAGE_CODES = set(LANG_NAMES.keys())
-TELEGRAM_LANGUAGE_CODE_MAP = {}
-for spec in SUPPORTED_LANGUAGE_SPECS:
-    for telegram_code in spec["telegram_codes"]:
-        TELEGRAM_LANGUAGE_CODE_MAP[telegram_code] = spec["code"]
-
-TRANSLATION_LANG_CODE_MAP = {
-    "ua": "uk",
-}
-TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
-TRANSLATION_BATCH_SIZE = 12
-TRANSLATION_PROTECTED_TERMS = [
-    "Tutor", "Admin", "Premium", "Telegram", "UTC", "XTR",
-    "online", "offline", "User ID", "Username", "ID",
-]
-LANGUAGE_PACK_GENERATION_FAILED = set()
-SUBJECT_TRANSLATIONS = {}
-CATEGORY_TRANSLATIONS = {}
-
-CATEGORY_BASE_LABELS = {
-    "stem": "STEM",
-    "languages": "Languages",
-    "humanities": "Humanities",
-    "business": "Business",
-    "arts": "Arts",
-    "primary": "Primary school",
-}
-
-CATEGORY_LABEL_OVERRIDES = {
-    "ua": {
-        "stem": "STEM",
-        "languages": "Мови",
-        "humanities": "Гуманітарні науки",
-        "business": "Бізнес та економіка",
-        "arts": "Мистецтво",
-        "primary": "Початкова школа",
-    },
-    "ru": {
-        "stem": "STEM",
-        "languages": "Языки",
-        "humanities": "Гуманитарные науки",
-        "business": "Бизнес и экономика",
-        "arts": "Искусство",
-        "primary": "Начальная школа",
-    },
-    "en": CATEGORY_BASE_LABELS.copy(),
-}
-
-SUBJECTS = [
-    {"id": "mathematics", "label": "Mathematics", "category": "stem"},
-    {"id": "english", "label": "English", "category": "languages"},
-    {"id": "chemistry", "label": "Chemistry", "category": "stem"},
-    {"id": "biology", "label": "Biology", "category": "stem"},
-    {"id": "physics", "label": "Physics", "category": "stem"},
-    {"id": "computer_science", "label": "Computer Science", "category": "stem"},
-    {"id": "native_language", "label": "Native Language & Literature", "category": "languages"},
-    {"id": "german", "label": "German", "category": "languages"},
-    {"id": "french", "label": "French", "category": "languages"},
-    {"id": "spanish", "label": "Spanish", "category": "languages"},
-    {"id": "history", "label": "History", "category": "humanities"},
-    {"id": "geography", "label": "Geography", "category": "humanities"},
-    {"id": "economics", "label": "Economics", "category": "business"},
-    {"id": "statistics", "label": "Statistics", "category": "business"},
-    {"id": "accounting", "label": "Accounting", "category": "business"},
-    {"id": "music", "label": "Music", "category": "arts"},
-    {"id": "art", "label": "Art", "category": "arts"},
-    {"id": "primary_school", "label": "Primary School Support", "category": "primary"},
-]
-
-SUBJECTS_BY_ID = {item["id"]: item for item in SUBJECTS}
-SUBJECT_ID_BY_ENGLISH_LABEL = {item["label"].lower(): item["id"] for item in SUBJECTS}
-CATEGORY_ID_BY_ENGLISH_LABEL = {label.lower(): category_id for category_id, label in CATEGORY_BASE_LABELS.items()}
-
-SUBJECT_LABEL_OVERRIDES = {
-    "ua": {
-        "mathematics": "Математика",
-        "english": "Англійська мова",
-        "chemistry": "Хімія",
-        "biology": "Біологія",
-        "physics": "Фізика",
-        "computer_science": "Інформатика / програмування",
-        "native_language": "Рідна мова та література",
-        "german": "Німецька мова",
-        "french": "Французька мова",
-        "spanish": "Іспанська мова",
-        "history": "Історія",
-        "geography": "Географія",
-        "economics": "Економіка",
-        "statistics": "Статистика",
-        "accounting": "Бухгалтерський облік",
-        "music": "Музика",
-        "art": "Образотворче мистецтво",
-        "primary_school": "Початкова школа",
-    },
-    "ru": {
-        "mathematics": "Математика",
-        "english": "Английский язык",
-        "chemistry": "Химия",
-        "biology": "Биология",
-        "physics": "Физика",
-        "computer_science": "Информатика / программирование",
-        "native_language": "Родной язык и литература",
-        "german": "Немецкий язык",
-        "french": "Французский язык",
-        "spanish": "Испанский язык",
-        "history": "История",
-        "geography": "География",
-        "economics": "Экономика",
-        "statistics": "Статистика",
-        "accounting": "Бухгалтерский учёт",
-        "music": "Музыка",
-        "art": "Изобразительное искусство",
-        "primary_school": "Начальная школа",
-    },
-    "en": {item["id"]: item["label"] for item in SUBJECTS},
-}
-
-
-def normalize_language_code(language_code: str | None) -> str:
-    if not language_code:
-        return "ua"
-    code = language_code.lower().replace("_", "-").strip()
-    if code in SUPPORTED_LANGUAGE_CODES:
-        return code
-    if code in TELEGRAM_LANGUAGE_CODE_MAP:
-        return TELEGRAM_LANGUAGE_CODE_MAP[code]
-    base = code.split("-")[0]
-    return TELEGRAM_LANGUAGE_CODE_MAP.get(base, "ua")
-
-
-def _translation_target_code(lang: str) -> str:
-    return TRANSLATION_LANG_CODE_MAP.get(lang, lang)
-
-
-def _prepare_text_for_translation(text: str, segment_index: int):
-    prepared = text
-    restore_map = {}
-
-    for match_index, match in enumerate(re.findall(r"\{[^{}]+\}", prepared)):
-        token = f"__VAR_{segment_index}_{match_index}__"
-        prepared = prepared.replace(match, token, 1)
-        restore_map[token] = match
-
-    for term_index, term in enumerate(TRANSLATION_PROTECTED_TERMS):
-        token = f"__TERM_{segment_index}_{term_index}__"
-        if term in prepared:
-            prepared = prepared.replace(term, token)
-            restore_map[token] = term
-
-    return prepared, restore_map
-
-
-def _restore_translated_text(text: str, restore_map: dict[str, str]) -> str:
-    restored = text
-    for token, original in restore_map.items():
-        restored = restored.replace(token, original)
-    return restored
-
-
-def _call_google_translate(source_lang: str, target_lang: str, text: str):
-    if not text:
-        return ""
-
-    params = urllib.parse.urlencode({
-        "client": "gtx",
-        "sl": source_lang,
-        "tl": target_lang,
-        "dt": "t",
-        "q": text,
-    })
-    request = urllib.request.Request(
-        f"{TRANSLATION_ENDPOINT}?{params}",
-        headers={"User-Agent": "Mozilla/5.0"},
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=15) as response:
-            payload = response.read().decode("utf-8")
-    except Exception as exc:
-        logging.warning(f"Translation request failed for {target_lang}: {exc}")
-        return None
-
-    try:
-        data = json.loads(payload)
-    except json.JSONDecodeError:
-        return None
-
-    translated_parts = []
-    for item in data[0] if isinstance(data, list) and data else []:
-        if isinstance(item, list) and item and item[0]:
-            translated_parts.append(item[0])
-    return "".join(translated_parts) or None
-
-
-def _split_translated_batch(translated_text: str, expected_count: int):
-    matches = list(re.finditer(r"\[\[\[(\d+)\]\]\]", translated_text))
-    if len(matches) != expected_count:
-        return []
-
-    parts = [""] * expected_count
-    for index, match in enumerate(matches):
-        marker_value = int(match.group(1))
-        if marker_value >= expected_count:
-            return []
-        start = match.end()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(translated_text)
-        parts[marker_value] = translated_text[start:end]
-
-    return parts if all(part is not None for part in parts) else []
-
-
-def _translate_batch(texts: list[str], target_lang: str, source_lang: str = "en"):
-    if target_lang in {"ua", "ru", "en"}:
-        return texts
-
-    prepared_parts = []
-    restore_maps = []
-    for index, text in enumerate(texts):
-        prepared_text, restore_map = _prepare_text_for_translation(text, index)
-        prepared_parts.append(f"[[[{index}]]]{prepared_text}")
-        restore_maps.append(restore_map)
-
-    translated = _call_google_translate(source_lang, _translation_target_code(target_lang), "".join(prepared_parts))
-    if translated:
-        split_parts = _split_translated_batch(translated, len(texts))
-        if len(split_parts) == len(texts):
-            return [
-                _restore_translated_text(split_parts[index].strip(), restore_maps[index]) or texts[index]
-                for index in range(len(texts))
-            ]
-
-    result = []
-    for index, text in enumerate(texts):
-        prepared_text, restore_map = _prepare_text_for_translation(text, index)
-        translated_text = _call_google_translate(source_lang, _translation_target_code(target_lang), prepared_text)
-        if not translated_text:
-            result.append(text)
-            continue
-        result.append(_restore_translated_text(translated_text.strip(), restore_map) or text)
-    return result
-
-
-def ensure_language_pack(lang: str) -> str:
-    lang = normalize_language_code(lang)
-    if lang in TEXTS:
-        return lang
-
-    if lang in LANGUAGE_PACK_GENERATION_FAILED:
-        TEXTS[lang] = TEXTS["en"].copy()
-        return lang
-
-    base_keys = list(TEXTS["en"].keys())
-    translated_pack = {}
-    try:
-        for offset in range(0, len(base_keys), TRANSLATION_BATCH_SIZE):
-            chunk_keys = base_keys[offset: offset + TRANSLATION_BATCH_SIZE]
-            chunk_values = [TEXTS["en"][key] for key in chunk_keys]
-            chunk_translated = _translate_batch(chunk_values, lang)
-            for key, translated_value, fallback in zip(chunk_keys, chunk_translated, chunk_values):
-                translated_pack[key] = translated_value or fallback
-    except Exception as exc:
-        logging.warning(f"Failed to build language pack for {lang}: {exc}")
-        LANGUAGE_PACK_GENERATION_FAILED.add(lang)
-        TEXTS[lang] = TEXTS["en"].copy()
-        return lang
-
-    TEXTS[lang] = translated_pack or TEXTS["en"].copy()
-    return lang
-
-
-def ensure_subject_translations(lang: str):
-    lang = normalize_language_code(lang)
-    if lang in SUBJECT_TRANSLATIONS:
-        return
-
-    if lang in SUBJECT_LABEL_OVERRIDES:
-        SUBJECT_TRANSLATIONS[lang] = SUBJECT_LABEL_OVERRIDES[lang].copy()
-        return
-
-    translated = _translate_batch([item["label"] for item in SUBJECTS], lang)
-    SUBJECT_TRANSLATIONS[lang] = {
-        item["id"]: translated[index] or item["label"]
-        for index, item in enumerate(SUBJECTS)
-    }
-
-
-def ensure_category_translations(lang: str):
-    lang = normalize_language_code(lang)
-    if lang in CATEGORY_TRANSLATIONS:
-        return
-
-    if lang in CATEGORY_LABEL_OVERRIDES:
-        CATEGORY_TRANSLATIONS[lang] = CATEGORY_LABEL_OVERRIDES[lang].copy()
-        return
-
-    category_ids = list(CATEGORY_BASE_LABELS.keys())
-    translated = _translate_batch([CATEGORY_BASE_LABELS[category_id] for category_id in category_ids], lang)
-    CATEGORY_TRANSLATIONS[lang] = {
-        category_id: translated[index] or CATEGORY_BASE_LABELS[category_id]
-        for index, category_id in enumerate(category_ids)
-    }
-
-
-def get_subject_label(subject_id: str, lang: str) -> str:
-    lang = ensure_language_pack(lang)
-    ensure_subject_translations(lang)
-    return SUBJECT_TRANSLATIONS.get(lang, {}).get(subject_id, SUBJECTS_BY_ID.get(subject_id, {}).get("label", subject_id))
-
-
-def get_category_label(category_id: str, lang: str) -> str:
-    lang = ensure_language_pack(lang)
-    ensure_category_translations(lang)
-    return CATEGORY_TRANSLATIONS.get(lang, {}).get(category_id, CATEGORY_BASE_LABELS.get(category_id, category_id))
-
-
-def get_subject_storage_label(subject_id: str) -> str:
-    return SUBJECTS_BY_ID.get(subject_id, {}).get("label", subject_id)
-
-
-def get_category_storage_label(category_id: str) -> str:
-    return CATEGORY_BASE_LABELS.get(category_id, category_id)
-
-
-def get_subject_id_by_label(label: str, lang: str):
-    value = (label or "").strip().lower()
-    if not value:
-        return None
-
-    for subject_id in SUBJECTS_BY_ID:
-        if get_subject_label(subject_id, lang).lower() == value:
-            return subject_id
-
-    for overrides in SUBJECT_LABEL_OVERRIDES.values():
-        for subject_id, subject_label in overrides.items():
-            if subject_label.lower() == value:
-                return subject_id
-
-    return SUBJECT_ID_BY_ENGLISH_LABEL.get(value)
-
-
-def resolve_subject_id_from_value(value: str):
-    normalized = (value or "").strip().lower()
-    if not normalized:
-        return None
-
-    if normalized in SUBJECT_ID_BY_ENGLISH_LABEL:
-        return SUBJECT_ID_BY_ENGLISH_LABEL[normalized]
-
-    for overrides in SUBJECT_LABEL_OVERRIDES.values():
-        for subject_id, subject_label in overrides.items():
-            if subject_label.lower() == normalized:
-                return subject_id
-
-    return None
-
-
-def resolve_category_id_from_value(value: str):
-    normalized = (value or "").strip().lower()
-    if not normalized:
-        return None
-
-    if normalized in CATEGORY_ID_BY_ENGLISH_LABEL:
-        return CATEGORY_ID_BY_ENGLISH_LABEL[normalized]
-
-    for overrides in CATEGORY_LABEL_OVERRIDES.values():
-        for category_id, category_label in overrides.items():
-            if category_label.lower() == normalized:
-                return category_id
-
-    return None
-
-
-def localize_subject_value(value: str, lang: str) -> str:
-    subject_id = resolve_subject_id_from_value(value)
-    if not subject_id:
-        return value or "-"
-    return get_subject_label(subject_id, lang)
-
-
-def localize_category_value(value: str, lang: str) -> str:
-    category_id = resolve_category_id_from_value(value)
-    if not category_id:
-        return value or "-"
-    return get_category_label(category_id, lang)
-
-
-def get_subject_category_id(subject_id: str) -> str:
-    return SUBJECTS_BY_ID.get(subject_id, {}).get("category", "languages")
-
-
-def get_payment_label(payment_type: str, lang: str) -> str:
-    aliases = {
-        "task": "task",
-        "single_task": "task",
-        "Одне завдання": "task",
-        "Одно задание": "task",
-        "Single task": "task",
-        "complex": "complex",
-        "Комплексне виконання роботи": "complex",
-        "Комплексное выполнение работы": "complex",
-        "Complex assignment": "complex",
-        "premium_profile": "premium_profile",
-        "Преміум профіль": "premium_profile",
-        "Премиум профиль": "premium_profile",
-        "Premium profile": "premium_profile",
-    }
-    normalized = aliases.get(payment_type, payment_type)
-    if normalized == "task":
-        return TEXTS[lang]["payment_type_task_label"]
-    if normalized == "complex":
-        return TEXTS[lang]["payment_type_complex_label"]
-    if normalized == "premium_profile":
-        return TEXTS[lang]["payment_type_premium_label"]
-    return payment_type
-
-
-def get_request_sender_label(sender_role: str, lang: str) -> str:
-    if sender_role == "tutor":
-        return TEXTS[lang]["sender_tutor_label"]
-    return TEXTS[lang]["sender_user_label"]
-
-
-async def send_payment_invoice(chat_id: int, lang: str, payment_type: str):
-    lang = ensure_language_pack(lang)
-    config = {
-        "task": {
-            "payload": "task_payment",
-            "title_key": "task_invoice_title",
-            "description_key": "task_invoice_description",
-            "label_key": "task_invoice_label",
-            "amount": 250,
-            "start_parameter": "task",
-        },
-        "complex": {
-            "payload": "complex_payment",
-            "title_key": "complex_invoice_title",
-            "description_key": "complex_invoice_description",
-            "label_key": "complex_invoice_label",
-            "amount": 500,
-            "start_parameter": "complex",
-        },
-        "premium_profile": {
-            "payload": "premium_profile_payment",
-            "title_key": "premium_invoice_title",
-            "description_key": "premium_invoice_description",
-            "label_key": "premium_invoice_label",
-            "amount": 2500,
-            "start_parameter": "premium_profile",
-        },
-    }[payment_type]
-
-    await bot.send_invoice(
-        chat_id=chat_id,
-        title=TEXTS[lang][config["title_key"]],
-        description=TEXTS[lang][config["description_key"]],
-        payload=config["payload"],
-        provider_token="",
-        currency="XTR",
-        prices=[LabeledPrice(label=TEXTS[lang][config["label_key"]], amount=config["amount"])],
-        start_parameter=config["start_parameter"],
-    )
 
 def get_telegram_full_name(user: types.User | None) -> str:
     if not user:
@@ -1153,28 +469,235 @@ def get_tutor_withdraw_progress(tutor_user_id: int) -> tuple[int, int, int]:
 
 
 def get_tutor_withdraw_button_text(tutor_user_id: int, lang: str) -> str:
-    lang = ensure_language_pack(lang)
     balance, target, _ = get_tutor_withdraw_progress(tutor_user_id)
     return f"{TEXTS[lang]['tutor_withdraw_btn']} {balance}/{target}⭐"
 
 
 def is_tutor_withdraw_button_text(text_value: str, tutor_user_id: int, lang: str) -> bool:
-    lang = ensure_language_pack(lang)
     return text_value == TEXTS[lang]['tutor_withdraw_btn'] or text_value == get_tutor_withdraw_button_text(tutor_user_id, lang)
 
 
 def build_tutor_balance_info_text(tutor_user_id: int, lang: str) -> str:
-    lang = ensure_language_pack(lang)
-    balance, _, remaining = get_tutor_withdraw_progress(tutor_user_id)
+    balance, target, remaining = get_tutor_withdraw_progress(tutor_user_id)
     if remaining > 0:
-        return (
-            f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\n"
-            f"{TEXTS[lang]['withdraw_left_to_earn'].format(remaining=remaining)}"
-        )
-    return (
-        f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\n"
-        f"{TEXTS[lang]['withdraw_already_available']}"
+        if lang == "ua":
+            return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо виведення залишилось заробити: {remaining}⭐"
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nДо вывода осталось заработать: {remaining}⭐"
+    if lang == "ua":
+        return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВиведення вже доступне."
+    return f"{TEXTS[lang]['tutor_balance_label']}: {balance}⭐\nВывод уже доступен."
+
+def normalize_username(username: str) -> str:
+    value = (username or "").strip()
+    if value.startswith("@"):
+        value = value[1:]
+    return value.lower()
+
+
+def get_payment_label(payment_type: str, lang: str) -> str:
+    labels = {
+        "task": TEXTS[lang].get("one", "task"),
+        "complex": TEXTS[lang].get("complex", "complex"),
+        "premium_profile": TEXTS[lang].get("premium_profile", "premium_profile"),
+        "balance_top_up": TEXTS[lang].get("balance_history_top_up", "Balance top up"),
+    }
+    return labels.get(payment_type, payment_type)
+
+
+def get_service_price(payment_type: str) -> int:
+    if payment_type == "task":
+        return 250
+    if payment_type == "complex":
+        return 500
+    if payment_type == "premium_profile":
+        return 2500
+    return 0
+
+
+def get_user_balance(user_id: int) -> int:
+    ensure_user(user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_balance_stars FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return int(row[0] or 0) if row else 0
+
+
+def set_user_balance(user_id: int, new_balance: int, note: str = "", actor_user_id: int | None = None):
+    ensure_user(user_id)
+    new_balance = max(0, int(new_balance))
+    current_balance = get_user_balance(user_id)
+    delta = new_balance - current_balance
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET user_balance_stars = ? WHERE user_id = ?", (new_balance, user_id))
+    cur.execute(
+        """
+        INSERT INTO user_balance_history (user_id, amount_stars, note, actor_user_id, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (user_id, delta, note, actor_user_id, datetime.now(timezone.utc).isoformat())
     )
+    conn.commit()
+    conn.close()
+    return new_balance
+
+
+def add_user_balance(user_id: int, amount_stars: int, note: str = "", actor_user_id: int | None = None) -> int:
+    ensure_user(user_id)
+    amount_stars = int(amount_stars)
+    current_balance = get_user_balance(user_id)
+    new_balance = max(0, current_balance + amount_stars)
+    actual_delta = new_balance - current_balance
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET user_balance_stars = ? WHERE user_id = ?", (new_balance, user_id))
+    cur.execute(
+        """
+        INSERT INTO user_balance_history (user_id, amount_stars, note, actor_user_id, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (user_id, actual_delta, note, actor_user_id, datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return new_balance
+
+
+def spend_user_balance(user_id: int, amount_stars: int, note: str = "") -> bool:
+    ensure_user(user_id)
+    amount_stars = int(amount_stars)
+    current_balance = get_user_balance(user_id)
+    if current_balance < amount_stars:
+        return False
+    add_user_balance(user_id, -amount_stars, note=note)
+    return True
+
+
+def get_bot_referral_link(user_id: int) -> str:
+    if not BOT_USERNAME:
+        return ""
+    return f"https://t.me/{BOT_USERNAME}?start=ref_{user_id}"
+
+
+def get_start_referrer_id(message: types.Message):
+    parts = (message.get_args() or "").strip()
+    if not parts.startswith("ref_"):
+        return None
+    value = parts[4:].strip()
+    if not value.isdigit():
+        return None
+    return int(value)
+
+
+def referral_already_recorded(referred_user_id: int) -> bool:
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM referrals WHERE referred_user_id = ?", (referred_user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return bool(row)
+
+
+def award_referral_bonus(referrer_user_id: int, referred_user_id: int):
+    if not referrer_user_id or referrer_user_id == referred_user_id:
+        return False
+    if referral_already_recorded(referred_user_id):
+        return False
+
+    ensure_user(referrer_user_id)
+    ensure_user(referred_user_id)
+    conn = db()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO referrals (referrer_user_id, referred_user_id, reward_stars, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (referrer_user_id, referred_user_id, REFERRAL_REWARD_STARS, datetime.now(timezone.utc).isoformat())
+    )
+    inserted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    if not inserted:
+        return False
+
+    add_user_balance(
+        referrer_user_id,
+        REFERRAL_REWARD_STARS,
+        note=f"Referral reward for user #{referred_user_id}",
+        actor_user_id=referred_user_id,
+    )
+    return True
+
+
+def get_referrer_for_user(user_id: int):
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT referrer_user_id FROM referrals WHERE referred_user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def find_user_id_by_identifier(identifier: str):
+    value = (identifier or "").strip()
+    if not value:
+        return None
+
+    conn = db()
+    cur = conn.cursor()
+
+    if value.isdigit():
+        cur.execute("SELECT user_id FROM users WHERE user_id = ?", (int(value),))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    normalized_phone = normalize_phone(value)
+    if normalized_phone:
+        cur.execute("SELECT user_id FROM users WHERE phone = ?", (normalized_phone,))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    username = normalize_username(value)
+    if username:
+        cur.execute("SELECT user_id FROM users WHERE lower(COALESCE(telegram_username, '')) = ?", (username,))
+        row = cur.fetchone()
+        if row:
+            conn.close()
+            return row[0]
+
+    conn.close()
+    return None
+
+
+def parse_balance_change_input(text_value: str):
+    value = (text_value or "").strip().replace(" ", "")
+    if not value:
+        return None
+    if value.startswith("="):
+        target = value[1:]
+        if target.lstrip("-").isdigit():
+            return ("set", int(target))
+        return None
+    if value.lstrip("+-").isdigit():
+        return ("delta", int(value))
+    return None
+
+
+def user_exists(user_id: int) -> bool:
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM users WHERE user_id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    return bool(row)
+
 
 def init_db():
     conn = db()
@@ -1189,6 +712,8 @@ def init_db():
             is_tutor INTEGER DEFAULT 0,
             phone TEXT,
             full_name TEXT,
+            telegram_username TEXT,
+            user_balance_stars INTEGER DEFAULT 0,
             premium_until TEXT,
             pending_payment TEXT,
             premium_remind_3days_sent INTEGER DEFAULT 0,
@@ -1258,6 +783,27 @@ def init_db():
     """)
 
     cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_balance_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            amount_stars INTEGER NOT NULL,
+            note TEXT,
+            actor_user_id INTEGER,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS referrals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referrer_user_id INTEGER NOT NULL,
+            referred_user_id INTEGER NOT NULL UNIQUE,
+            reward_stars INTEGER NOT NULL DEFAULT 250,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS tutor_balances (
             tutor_user_id INTEGER PRIMARY KEY,
             balance_stars INTEGER NOT NULL DEFAULT 0
@@ -1283,6 +829,12 @@ def init_db():
 
     if not column_exists(cur, "users", "full_name"):
         cur.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
+
+    if not column_exists(cur, "users", "telegram_username"):
+        cur.execute("ALTER TABLE users ADD COLUMN telegram_username TEXT")
+
+    if not column_exists(cur, "users", "user_balance_stars"):
+        cur.execute("ALTER TABLE users ADD COLUMN user_balance_stars INTEGER DEFAULT 0")
 
     if not column_exists(cur, "tutor_requests", "assigned_tutor_id"):
         cur.execute("ALTER TABLE tutor_requests ADD COLUMN assigned_tutor_id INTEGER")
@@ -1313,10 +865,11 @@ def ensure_user(user_id: int):
         cur.execute("""
             INSERT INTO users (
                 user_id, language, manual_language, is_admin, is_tutor,
-                phone, full_name, premium_until, pending_payment,
+                phone, full_name, telegram_username, user_balance_stars,
+                premium_until, pending_payment,
                 premium_remind_3days_sent, premium_expired_sent
             )
-            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, NULL, NULL, 0, 0)
+            VALUES (?, 'ua', 0, 0, 0, NULL, NULL, NULL, 0, NULL, NULL, 0, 0)
         """, (user_id,))
         conn.commit()
 
@@ -1329,7 +882,8 @@ def get_user(user_id: int):
     cur = conn.cursor()
     cur.execute("""
         SELECT user_id, language, manual_language, is_admin, is_tutor,
-               phone, full_name, premium_until, pending_payment,
+               phone, full_name, telegram_username, user_balance_stars,
+               premium_until, pending_payment,
                premium_remind_3days_sent, premium_expired_sent
         FROM users
         WHERE user_id = ?
@@ -1345,20 +899,26 @@ def get_user(user_id: int):
         "is_tutor": bool(row[4]),
         "phone": row[5],
         "full_name": row[6],
-        "premium_until": row[7],
-        "pending_payment": row[8],
-        "premium_remind_3days_sent": bool(row[9]),
-        "premium_expired_sent": bool(row[10]),
+        "telegram_username": row[7],
+        "user_balance_stars": int(row[8] or 0),
+        "premium_until": row[9],
+        "pending_payment": row[10],
+        "premium_remind_3days_sent": bool(row[11]),
+        "premium_expired_sent": bool(row[12]),
     }
 
 
 def detect_language_code(language_code: str):
-    return ensure_language_pack(normalize_language_code(language_code))
+    if not language_code:
+        return "ua"
+    code = language_code.lower()
+    if code.startswith("ru"):
+        return "ru"
+    return "ua"
 
 
 def set_user_language(user_id: int, language: str, manual: bool = False):
     ensure_user(user_id)
-    language = ensure_language_pack(normalize_language_code(language))
     conn = db()
     cur = conn.cursor()
     cur.execute("""
@@ -1401,12 +961,23 @@ def set_user_full_name(user_id: int, full_name: str):
     conn.close()
 
 
+def set_user_username(user_id: int, username: str | None):
+    ensure_user(user_id)
+    normalized = normalize_username(username or "")
+    conn = db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET telegram_username = ? WHERE user_id = ?", (normalized or None, user_id))
+    conn.commit()
+    conn.close()
+
+
 def sync_user_telegram_name(user: types.User | None):
     if not user:
         return
     full_name = get_telegram_full_name(user)
     if full_name:
         set_user_full_name(user.id, full_name)
+    set_user_username(user.id, getattr(user, "username", None))
 
 
 def resolve_user_language(message: types.Message):
@@ -1416,20 +987,11 @@ def resolve_user_language(message: types.Message):
     user = get_user(user_id)
 
     if user["manual_language"]:
-        return ensure_language_pack(user["language"] or "ua")
+        return user["language"] or "ua"
 
-    if message.from_user.language_code:
-        detected = detect_language_code(message.from_user.language_code)
-        set_user_language(user_id, detected, manual=False)
-        return detected
-
-    stored_language = user.get("language") or "ua"
-    return ensure_language_pack(stored_language)
-
-
-def get_user_interface_language(user_id: int) -> str:
-    user = get_user(user_id)
-    return ensure_language_pack(user.get("language") or "ua")
+    detected = detect_language_code(message.from_user.language_code)
+    set_user_language(user_id, detected, manual=False)
+    return detected
 
 
 def add_admin(user_id: int):
@@ -1756,7 +1318,6 @@ def premium_until_text(user_id: int):
 
 
 def get_profile_status_text(user_id: int, lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     return TEXTS[lang]["profile_premium"] if is_premium(user_id) else TEXTS[lang]["profile_basic"]
 
 
@@ -1935,6 +1496,12 @@ def try_award_tutor_for_request(request_id: int):
         amount_stars=reward,
         request_id=request_id,
         note=f"50% від оплати за заявку #{request_id}"
+    )
+    add_user_balance(
+        user_id=request_data["assigned_tutor_id"],
+        amount_stars=reward,
+        note=f"Tutor reward for request #{request_id}",
+        actor_user_id=request_data["user_id"],
     )
 
     conn = db()
@@ -2127,7 +1694,6 @@ async def check_premium_reminders():
                     logging.warning(f"Failed to send premium expired notice to {user_id}: {e}")
 
 def build_profile_text(user_id: int, lang: str):
-    lang = ensure_language_pack(lang)
     user = get_user(user_id)
 
     if is_admin_user(user_id):
@@ -2146,13 +1712,21 @@ def build_profile_text(user_id: int, lang: str):
         f"{TEXTS[lang]['profile_role']}: {role}",
         f"{TEXTS[lang]['profile_language']}: {language_name}",
         f"{TEXTS[lang]['profile_status']}: {status}",
+        f"{TEXTS[lang]['balance_label']}: {get_user_balance(user_id)}⭐",
     ]
 
     if user.get("full_name"):
         lines.append(f"{TEXTS[lang]['tutor_name']}: {user['full_name']}")
 
+    if user.get("telegram_username"):
+        lines.append(f"{TEXTS[lang]['telegram_username_label']}: @{user['telegram_username']}")
+
     if user.get("phone"):
         lines.append(f"{TEXTS[lang]['tutor_phone']}: {user['phone']}")
+
+    referrer_id = get_referrer_for_user(user_id)
+    if referrer_id:
+        lines.append(f"{TEXTS[lang]['referrer_label']}: {referrer_id}")
 
     tutor_profile = get_tutor_profile(user_id)
     if tutor_profile:
@@ -2178,15 +1752,13 @@ def build_profile_text(user_id: int, lang: str):
 
     if requests:
         for request_id, subject, status_code, created_at in requests:
-            lines.append(f"• #{request_id} | {localize_subject_value(subject, lang)} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
+            lines.append(f"• #{request_id} | {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
     else:
         lines.append(TEXTS[lang]["no_requests"])
 
     return "\n".join(lines)
 
-
 def build_tutor_panel_text(user_id: int, lang: str):
-    lang = ensure_language_pack(lang)
     tutor_profile = get_tutor_profile(user_id)
     user = get_user(user_id)
     display_name = tutor_profile["full_name"] if tutor_profile else (user.get("full_name") or f"user_{user_id}")
@@ -2208,28 +1780,27 @@ def build_tutor_panel_text(user_id: int, lang: str):
 
 
 def build_request_detail_text(request_data: dict, lang: str):
-    lang = ensure_language_pack(lang)
     payment_part = "-"
     if request_data.get("payment_amount_stars", 0) > 0:
-        payment_part = f"{get_payment_label(request_data.get('payment_type') or '-', lang)} | {request_data.get('payment_amount_stars')}⭐"
+        payment_part = f"{request_data.get('payment_type') or '-'} | {request_data.get('payment_amount_stars')}⭐"
 
     return (
         f"{TEXTS[lang]['tutor_request_detail_title']} #{request_data['id']}\n\n"
         f"{TEXTS[lang]['complaint_user_id']}: {request_data['user_id']}\n"
-        f"{TEXTS[lang]['category_label']}: {localize_category_value(request_data.get('category') or '-', lang)}\n"
-        f"{TEXTS[lang]['tutor_subject']}: {localize_subject_value(request_data.get('subject') or '-', lang)}\n"
+        f"{TEXTS[lang]['category_label']}: {request_data.get('category') or '-'}\n"
+        f"{TEXTS[lang]['tutor_subject']}: {request_data.get('subject') or '-'}\n"
         f"{TEXTS[lang]['tutor_name']}: {request_data.get('client_name') or '-'}\n"
         f"{TEXTS[lang]['tutor_phone']}: {request_data.get('phone') or '-'}\n"
         f"{TEXTS[lang]['level_label']}: {request_data.get('level') or '-'}\n"
         f"{TEXTS[lang]['goal_label']}: {request_data.get('goal') or '-'}\n"
         f"{TEXTS[lang]['preferred_time_label']}: {request_data.get('preferred_time') or '-'}\n"
         f"{TEXTS[lang]['format_label']}: {request_data.get('lesson_format') or '-'}\n"
-        f"{TEXTS[lang]['payment_label']}: {payment_part}\n"
+        f"Payment: {payment_part}\n"
         f"{TEXTS[lang]['status_label']}: {get_request_status_text(request_data.get('status', ''), lang)}"
     )
 
+
 def main_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["task"])
     kb.row(TEXTS[lang]["tutor"])
@@ -2239,22 +1810,21 @@ def main_menu(lang: str = "ua"):
 
 
 def back_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def get_start_phone_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(KeyboardButton(TEXTS[lang].get("share_phone_btn", "📱 Поділитися номером"), request_contact=True))
     return kb
 
 
 def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["my_profile_btn"])
+    kb.row(TEXTS[lang]["balance_top_up_btn"], TEXTS[lang]["referral_link_btn"])
 
     if is_tutor:
         kb.row(TEXTS[lang]["tutor_profile_btn"])
@@ -2264,6 +1834,7 @@ def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False
 
     if is_admin:
         kb.row(TEXTS[lang]["admin_profile_btn"])
+        kb.row(TEXTS[lang]["admin_balance_btn"])
         kb.row(TEXTS[lang]["admin_logout_btn"])
     else:
         kb.row(TEXTS[lang]["admin_login_btn"])
@@ -2275,15 +1846,14 @@ def system_menu(lang: str = "ua", is_admin: bool = False, is_tutor: bool = False
 
 
 def premium_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def profile_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.row(TEXTS[lang]["balance_top_up_btn"], TEXTS[lang]["referral_link_btn"])
     kb.row(TEXTS[lang]["change_language_btn"])
     kb.row(TEXTS[lang]["profile_upgrade_btn"])
     kb.row(TEXTS[lang]["back"])
@@ -2291,18 +1861,17 @@ def profile_menu(lang: str = "ua"):
 
 
 def admin_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["admin_new_requests_btn"])
     kb.row(TEXTS[lang]["admin_premium_users_btn"])
     kb.row(TEXTS[lang]["admin_search_btn"])
     kb.row(TEXTS[lang]["admin_reply_btn"])
+    kb.row(TEXTS[lang]["admin_balance_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def tutor_menu(user_id: int, lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["tutor_new_requests_btn"])
     kb.row(TEXTS[lang]["tutor_my_requests_btn"])
@@ -2312,31 +1881,21 @@ def tutor_menu(user_id: int, lang: str = "ua"):
 
 
 SUBJECT_CATEGORIES = {
-    category_id: [item["id"] for item in SUBJECTS if item["category"] == category_id]
-    for category_id in CATEGORY_BASE_LABELS
+    "📚 Предмети": [
+        "Математика",
+        "Англійська",
+    ],
 }
 
 
 def get_language_keyboard(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    row = []
-    for spec in SUPPORTED_LANGUAGE_SPECS:
-        row.append(spec["button"])
-        if len(row) == 2:
-            kb.row(*row)
-            row = []
-
-    if row:
-        kb.row(*row)
-
+    kb.row("🇺🇦 Українська", "🇷🇺 Русский")
     kb.row(TEXTS[lang]["back"])
     return kb
 
 
 def get_task_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["one"])
     kb.row(TEXTS[lang]["complex"])
@@ -2346,16 +1905,20 @@ def get_task_menu(lang: str = "ua"):
 
 
 def get_tutor_categories_menu(lang: str = "ua"):
-    return get_tutor_subjects_menu(lang=lang)
-
-
-def get_tutor_subjects_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    for category in SUBJECT_CATEGORIES.keys():
+        kb.row(category)
+    kb.row(TEXTS[lang]["back"])
+    return kb
+
+
+def get_tutor_subjects_menu(category: str, lang: str = "ua"):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    subjects = SUBJECT_CATEGORIES.get(category, [])
 
     row = []
-    for item in SUBJECTS:
-        row.append(get_subject_label(item["id"], lang))
+    for subject in subjects:
+        row.append(subject)
         if len(row) == 2:
             kb.row(*row)
             row = []
@@ -2368,14 +1931,12 @@ def get_tutor_subjects_menu(lang: str = "ua"):
 
 
 def get_request_confirm_menu(lang: str = "ua"):
-    lang = ensure_language_pack(lang)
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
     kb.row(TEXTS[lang]["confirm_btn"], TEXTS[lang]["edit_btn"])
     kb.row(TEXTS[lang]["back"])
     return kb
 
 def build_take_request_keyboard(request_id: int, lang: str):
-    lang = ensure_language_pack(lang)
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
         TEXTS[lang]["tutor_take_request_btn"],
@@ -2385,20 +1946,18 @@ def build_take_request_keyboard(request_id: int, lang: str):
 
 
 def build_tutor_requests_keyboard(rows, lang: str):
-    lang = ensure_language_pack(lang)
     kb = InlineKeyboardMarkup()
     for row in rows:
         request_id = row[0]
         subject = row[3]
         kb.add(InlineKeyboardButton(
-            f"#{request_id} | {localize_subject_value(subject, lang)}",
+            f"#{request_id} | {subject}",
             callback_data=f"open_tutor_request:{request_id}"
         ))
     return kb
 
 
 def build_tutor_request_actions_keyboard(request_id: int, lang: str):
-    lang = ensure_language_pack(lang)
     kb = InlineKeyboardMarkup()
     kb.add(InlineKeyboardButton(
         TEXTS[lang]["tutor_write_user_btn"],
@@ -2411,10 +1970,44 @@ def build_tutor_request_actions_keyboard(request_id: int, lang: str):
     return kb
 
 
+def build_balance_topup_keyboard():
+    kb = InlineKeyboardMarkup(row_width=2)
+    for amount in TOP_UP_AMOUNT_OPTIONS:
+        kb.insert(InlineKeyboardButton(f"{amount}⭐", callback_data=f"balance_topup:{amount}"))
+    return kb
+
+
+async def send_balance_topup_invoice(chat_id: int, amount: int, lang: str):
+    await bot.send_invoice(
+        chat_id=chat_id,
+        title=TEXTS[lang]["balance_top_up_invoice_title"],
+        description=TEXTS[lang]["balance_top_up_invoice_description"],
+        payload=f"balance_topup_{amount}",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label=f"{TEXTS[lang]['balance_top_up_btn']} {amount}⭐", amount=amount)],
+        start_parameter=f"balance_topup_{amount}"
+    )
+
+
+@dp.callback_query_handler(lambda c: c.data and c.data.startswith("balance_topup:"))
+async def balance_topup_callback(callback_query: types.CallbackQuery):
+    user_id = callback_query.from_user.id
+    lang = get_user(user_id)["language"] or "ua"
+    try:
+        amount = int(callback_query.data.split(":", 1)[1])
+    except Exception:
+        await callback_query.answer(TEXTS[lang]["error_try_again"], show_alert=True)
+        return
+
+    await send_balance_topup_invoice(callback_query.message.chat.id, amount, lang)
+    await callback_query.answer()
+
+
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("take_request:"))
 async def take_request_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = ensure_language_pack(get_user(user_id)["language"] or "ua")
+    lang = get_user(user_id)["language"] or "ua"
     sync_user_telegram_name(callback_query.from_user)
 
     if not is_tutor_user(user_id):
@@ -2430,8 +2023,7 @@ async def take_request_callback(callback_query: types.CallbackQuery):
     request_data = get_request_by_id(request_id)
     if request_data:
         try:
-            request_user_lang = get_user_interface_language(request_data["user_id"])
-            await bot.send_message(request_data["user_id"], TEXTS[request_user_lang]["tutor_request_taken_user"])
+            await bot.send_message(request_data["user_id"], TEXTS[lang]["tutor_request_taken_user"])
         except Exception as e:
             logging.warning(f"Failed to notify user about tutor assignment: {e}")
 
@@ -2446,7 +2038,7 @@ async def take_request_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("open_tutor_request:"))
 async def open_tutor_request_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = ensure_language_pack(get_user(user_id)["language"] or "ua")
+    lang = get_user(user_id)["language"] or "ua"
     sync_user_telegram_name(callback_query.from_user)
 
     if not is_tutor_user(user_id):
@@ -2466,8 +2058,8 @@ async def open_tutor_request_callback(callback_query: types.CallbackQuery):
 
     if files:
         for _, _, sender_role, _, file_name, created_at in files:
-            sender_text = get_request_sender_label(sender_role, lang)
-            lines.append(f"• {file_name or TEXTS[lang]['file_generic_name']} | {sender_text} | {created_at[:16]}")
+            sender_text = "user" if sender_role == "user" else "tutor"
+            lines.append(f"• {file_name or 'file'} | {sender_text} | {created_at[:16]}")
     else:
         lines.append(TEXTS[lang]["no_request_files"])
 
@@ -2482,7 +2074,7 @@ async def open_tutor_request_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_msg_user:"))
 async def tutor_msg_user_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = ensure_language_pack(get_user(user_id)["language"] or "ua")
+    lang = get_user(user_id)["language"] or "ua"
     sync_user_telegram_name(callback_query.from_user)
 
     if not is_tutor_user(user_id):
@@ -2508,7 +2100,7 @@ async def tutor_msg_user_callback(callback_query: types.CallbackQuery):
 @dp.callback_query_handler(lambda c: c.data and c.data.startswith("tutor_file_user:"))
 async def tutor_file_user_callback(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
-    lang = ensure_language_pack(get_user(user_id)["language"] or "ua")
+    lang = get_user(user_id)["language"] or "ua"
     sync_user_telegram_name(callback_query.from_user)
 
     if not is_tutor_user(user_id):
@@ -2533,9 +2125,24 @@ async def tutor_file_user_callback(callback_query: types.CallbackQuery):
 
 @dp.message_handler(commands=["start"])
 async def start(message: types.Message):
+    is_new_user = not user_exists(message.from_user.id)
     ensure_user(message.from_user.id)
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
+
+    referrer_id = get_start_referrer_id(message)
+    if is_new_user and referrer_id and award_referral_bonus(referrer_id, message.from_user.id):
+        try:
+            ref_lang = get_user(referrer_id)["language"] or "ua"
+            await bot.send_message(referrer_id, TEXTS[ref_lang]["referral_reward_received"])
+        except Exception as e:
+            logging.warning(f"Failed to notify referrer {referrer_id}: {e}")
+
+    user = get_user(message.from_user.id)
+    if user.get("phone"):
+        user_state[message.from_user.id] = "main"
+        await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
+        return
 
     user_state[message.from_user.id] = "start_phone_wait"
     await message.answer(TEXTS[lang]["start_phone_request"], reply_markup=get_start_phone_menu(lang))
@@ -2547,7 +2154,7 @@ async def cmd_myprofile(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "system_menu"
     await message.answer(
-        TEXTS[lang]["system_menu_title"],
+        build_profile_text(message.from_user.id, lang),
         reply_markup=system_menu(
             lang,
             is_admin=is_admin_user(message.from_user.id),
@@ -2562,7 +2169,19 @@ async def cmd_premium(message: types.Message):
     lang = resolve_user_language(message)
     user_state[message.from_user.id] = "premium_profile_screen"
     await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-    await send_payment_invoice(message.chat.id, lang, "premium_profile")
+    if await try_pay_service_from_balance(message, lang, "premium_profile"):
+        return
+    await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=premium_menu(lang))
+    await bot.send_invoice(
+        chat_id=message.chat.id,
+        title="Premium Profile Payment",
+        description="Unlimited tasks for one month",
+        payload="premium_profile_payment",
+        provider_token="",
+        currency="XTR",
+        prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+        start_parameter="premium_profile"
+    )
 
 
 @dp.message_handler(commands=["complaint"])
@@ -2597,6 +2216,49 @@ async def set_language(message: types.Message):
     await message.answer(TEXTS[lang]["main_menu_hint"], reply_markup=main_menu(lang))
 
 
+async def try_pay_service_from_balance(message: types.Message, lang: str, payment_type: str) -> bool:
+    price = get_service_price(payment_type)
+    if price <= 0:
+        return False
+
+    if get_user_balance(message.from_user.id) < price:
+        return False
+
+    if not spend_user_balance(message.from_user.id, price, note=f"Payment for {payment_type}"):
+        return False
+
+    add_payment(message.from_user.id, payment_type, price)
+
+    if payment_type == "task":
+        set_pending_payment(message.from_user.id, "task")
+        user_state[message.from_user.id] = "awaiting_file"
+        await message.answer(
+            f"{TEXTS[lang]['balance_payment_used']}\n\n{TEXTS[lang]['send_file_now']}",
+            reply_markup=back_menu(lang)
+        )
+        return True
+
+    if payment_type == "complex":
+        set_pending_payment(message.from_user.id, "complex")
+        user_state[message.from_user.id] = "awaiting_file"
+        await message.answer(
+            f"{TEXTS[lang]['balance_payment_used']}\n\n{TEXTS[lang]['send_file_now']}",
+            reply_markup=back_menu(lang)
+        )
+        return True
+
+    if payment_type == "premium_profile":
+        activate_premium(message.from_user.id, days=30)
+        user_state[message.from_user.id] = "main"
+        await message.answer(
+            f"{TEXTS[lang]['balance_payment_used']}\n\n{TEXTS[lang]['premium_profile_activated']}",
+            reply_markup=main_menu(lang)
+        )
+        return True
+
+    return False
+
+
 @dp.pre_checkout_query_handler(lambda query: True)
 async def pre_checkout(pre_checkout_q: types.PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_q.id, ok=True)
@@ -2607,6 +2269,20 @@ async def successful_payment(message: types.Message):
     sync_user_telegram_name(message.from_user)
     lang = resolve_user_language(message)
     payload = message.successful_payment.invoice_payload
+
+    if payload.startswith("balance_topup_"):
+        amount = int(payload.split("_")[-1])
+        add_user_balance(message.from_user.id, amount, note="Telegram Stars top up")
+        add_payment(message.from_user.id, "balance_top_up", amount)
+        await message.answer(
+            TEXTS[lang]["balance_top_up_success"].format(amount=amount),
+            reply_markup=system_menu(
+                lang,
+                is_admin=is_admin_user(message.from_user.id),
+                is_tutor=is_tutor_user(message.from_user.id)
+            )
+        )
+        return
 
     if payload == "task_payment":
         set_pending_payment(message.from_user.id, "task")
@@ -2659,8 +2335,7 @@ async def handle_document(message: types.Message):
             await message.answer(TEXTS[lang]["error_try_again"], reply_markup=tutor_menu(message.from_user.id, lang))
             return
 
-        reply_user_lang = get_user_interface_language(reply_user_id)
-        caption = f"{TEXTS[reply_user_lang]['file_from_tutor_caption']} #{request_id}"
+        caption = f"{TEXTS[lang]['file_from_tutor_caption']} #{request_id}"
         try:
             await bot.send_document(
                 chat_id=reply_user_id,
@@ -2679,7 +2354,7 @@ async def handle_document(message: types.Message):
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
         except Exception as e:
-            await message.answer(TEXTS[lang]["reply_send_error"].format(error=e), reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(f"❌ {e}", reply_markup=tutor_menu(message.from_user.id, lang))
 
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "tutor_panel"
@@ -2721,11 +2396,10 @@ async def handle_document(message: types.Message):
         )
 
         try:
-            tutor_lang = get_user_interface_language(tutor_user_id)
             await bot.send_document(
                 chat_id=tutor_user_id,
                 document=message.document.file_id,
-                caption=f"{TEXTS[tutor_lang]['file_from_user_caption']} #{request_id}"
+                caption=f"{TEXTS[lang]['file_from_user_caption']} #{request_id}"
             )
         except Exception as e:
             logging.warning(f"Failed to send request file to tutor {tutor_user_id}: {e}")
@@ -2757,7 +2431,7 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "system_menu"
         await message.answer(
-            TEXTS[lang]["system_menu_title"],
+            build_profile_text(message.from_user.id, lang),
             reply_markup=system_menu(
                 lang,
                 is_admin=is_admin_user(message.from_user.id),
@@ -2770,13 +2444,39 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "system_menu"
         await message.answer(
-            TEXTS[lang]["system_menu_title"],
+            build_profile_text(message.from_user.id, lang),
             reply_markup=system_menu(
                 lang,
                 is_admin=is_admin_user(message.from_user.id),
                 is_tutor=is_tutor_user(message.from_user.id)
             )
         )
+        return
+
+    if text == TEXTS[lang]["balance_top_up_btn"]:
+        user_state[message.from_user.id] = "system_menu"
+        await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=system_menu(
+            lang,
+            is_admin=is_admin_user(message.from_user.id),
+            is_tutor=is_tutor_user(message.from_user.id)
+        ))
+        await message.answer(TEXTS[lang]["balance_top_up_title"], reply_markup=build_balance_topup_keyboard())
+        return
+
+    if text == TEXTS[lang]["referral_link_btn"]:
+        referral_link = get_bot_referral_link(message.from_user.id)
+        if not referral_link:
+            await message.answer(TEXTS[lang]["referral_link_unavailable"], reply_markup=system_menu(
+                lang,
+                is_admin=is_admin_user(message.from_user.id),
+                is_tutor=is_tutor_user(message.from_user.id)
+            ))
+            return
+        await message.answer(f"{referral_link}\n\n{TEXTS[lang]['referral_link_text']}", reply_markup=system_menu(
+            lang,
+            is_admin=is_admin_user(message.from_user.id),
+            is_tutor=is_tutor_user(message.from_user.id)
+        ))
         return
 
     if text == TEXTS[lang]["support_btn"]:
@@ -2793,8 +2493,8 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["tutor"]:
         user_temp[message.from_user.id] = {}
-        user_state[message.from_user.id] = "tutor_subject_wait"
-        await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
+        user_state[message.from_user.id] = "tutor_category_wait"
+        await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
         return
 
     # ---------------------------
@@ -2833,14 +2533,13 @@ async def menu(message: types.Message):
             return
 
         try:
-            reply_user_lang = get_user_interface_language(reply_user_id)
-            await bot.send_message(reply_user_id, f"{TEXTS[reply_user_lang]['tutor_message_prefix']}{text}")
+            await bot.send_message(reply_user_id, f"💬 Tutor:\n\n{text}")
             await message.answer(
                 f"{TEXTS[lang]['tutor_reply_text_sent']}\n\n{build_tutor_panel_text(message.from_user.id, lang)}",
                 reply_markup=tutor_menu(message.from_user.id, lang)
             )
         except Exception as e:
-            await message.answer(TEXTS[lang]["reply_send_error"].format(error=e), reply_markup=tutor_menu(message.from_user.id, lang))
+            await message.answer(f"❌ {e}", reply_markup=tutor_menu(message.from_user.id, lang))
 
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "tutor_panel"
@@ -2928,25 +2627,31 @@ async def menu(message: types.Message):
         return
 
     if state == "tutor_category_wait":
+        if text not in SUBJECT_CATEGORIES:
+            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
+            return
+
+        user_temp[message.from_user.id] = {"category": text}
         user_state[message.from_user.id] = "tutor_subject_wait"
-        await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
+        await message.answer(
+            TEXTS[lang]["tutor_subject_title"],
+            reply_markup=get_tutor_subjects_menu(text, lang)
+        )
         return
 
     if state == "tutor_subject_wait":
-        subject_id = get_subject_id_by_label(text, lang)
+        selected_category = user_temp.get(message.from_user.id, {}).get("category")
+        valid_subjects = SUBJECT_CATEGORIES.get(selected_category, [])
 
-        if not subject_id:
+        if text not in valid_subjects:
             await message.answer(
                 TEXTS[lang]["choose_valid_subject"],
-                reply_markup=get_tutor_subjects_menu(lang)
+                reply_markup=get_tutor_subjects_menu(selected_category, lang)
             )
             return
 
         user_temp.setdefault(message.from_user.id, {})
-        user_temp[message.from_user.id]["subject_id"] = subject_id
-        user_temp[message.from_user.id]["subject"] = get_subject_storage_label(subject_id)
-        user_temp[message.from_user.id]["category_id"] = get_subject_category_id(subject_id)
-        user_temp[message.from_user.id]["category"] = get_category_storage_label(get_subject_category_id(subject_id))
+        user_temp[message.from_user.id]["subject"] = text
         user_state[message.from_user.id] = "tutor_level_wait"
         await message.answer(TEXTS[lang]["ask_level"], reply_markup=back_menu(lang))
         return
@@ -2983,8 +2688,8 @@ async def menu(message: types.Message):
 
         confirm_text = (
             f"{TEXTS[lang]['request_confirm_text']}\n\n"
-            f"{TEXTS[lang]['category_label']}: {localize_category_value(d.get('category', '-'), lang)}\n"
-            f"{TEXTS[lang]['tutor_subject']}: {localize_subject_value(d.get('subject', '-'), lang)}\n"
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}\n"
+            f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}\n"
             f"{TEXTS[lang]['tutor_name']}: {client_name}\n"
             f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}\n"
             f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}\n"
@@ -2998,9 +2703,9 @@ async def menu(message: types.Message):
 
     if state == "tutor_confirm_wait":
         if text == TEXTS[lang]["edit_btn"]:
-            user_state[message.from_user.id] = "tutor_subject_wait"
+            user_state[message.from_user.id] = "tutor_category_wait"
             user_temp[message.from_user.id] = {}
-            await message.answer(TEXTS[lang]["tutor_subject_title"], reply_markup=get_tutor_subjects_menu(lang))
+            await message.answer(TEXTS[lang]["categories_title"], reply_markup=get_tutor_categories_menu(lang))
             return
 
         if text != TEXTS[lang]["confirm_btn"]:
@@ -3034,8 +2739,8 @@ async def menu(message: types.Message):
             f"{TEXTS[lang]['complaint_language']}: {language_name}",
             f"{TEXTS[lang]['complaint_profile']}: {profile_status}",
             f"{TEXTS[lang]['tutor_name']}: {client_name}",
-            f"{TEXTS[lang]['category_label']}: {localize_category_value(d.get('category', '-'), lang)}",
-            f"{TEXTS[lang]['tutor_subject']}: {localize_subject_value(d.get('subject', '-'), lang)}",
+            f"{TEXTS[lang]['category_label']}: {d.get('category', '-')}",
+            f"{TEXTS[lang]['tutor_subject']}: {d.get('subject', '-')}",
             f"{TEXTS[lang]['tutor_phone']}: {user_profile.get('phone') or '-'}",
             f"{TEXTS[lang]['level_label']}: {d.get('level', '-')}",
             f"{TEXTS[lang]['goal_label']}: {d.get('goal', '-')}",
@@ -3062,6 +2767,81 @@ async def menu(message: types.Message):
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "main"
         await message.answer(TEXTS[lang]["tutor_request_sent"], reply_markup=main_menu(lang))
+        return
+
+    if state == "admin_balance_lookup_wait":
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        target_user_id = find_user_id_by_identifier(text)
+        if not target_user_id:
+            await message.answer(TEXTS[lang]["admin_balance_user_not_found"], reply_markup=admin_menu(lang))
+            user_state[message.from_user.id] = "admin_panel"
+            return
+
+        user_temp.setdefault(message.from_user.id, {})
+        user_temp[message.from_user.id]["balance_target_user_id"] = target_user_id
+        target_user = get_user(target_user_id)
+        user_state[message.from_user.id] = "admin_balance_amount_wait"
+        await message.answer(
+            f"{TEXTS[lang]['admin_balance_user_found']}: {target_user_id}\n"
+            f"{TEXTS[lang]['admin_balance_current']}: {get_user_balance(target_user_id)}⭐\n"
+            f"{TEXTS[lang]['tutor_name']}: {target_user.get('full_name') or '-'}\n"
+            f"{TEXTS[lang]['tutor_phone']}: {target_user.get('phone') or '-'}\n"
+            f"{TEXTS[lang]['telegram_username_label']}: @{target_user.get('telegram_username') or '-'}\n\n"
+            f"{TEXTS[lang]['admin_balance_amount_prompt']}",
+            reply_markup=back_menu(lang)
+        )
+        return
+
+    if state == "admin_balance_amount_wait":
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        target_user_id = user_temp.get(message.from_user.id, {}).get("balance_target_user_id")
+        operation = parse_balance_change_input(text)
+        if not target_user_id or not operation:
+            await message.answer(TEXTS[lang]["admin_balance_invalid_amount"], reply_markup=back_menu(lang))
+            return
+
+        mode, amount_value = operation
+        old_balance = get_user_balance(target_user_id)
+        if mode == "set":
+            new_balance = set_user_balance(
+                target_user_id,
+                amount_value,
+                note=f"Admin set balance to {amount_value}",
+                actor_user_id=message.from_user.id,
+            )
+            diff = new_balance - old_balance
+        else:
+            new_balance = add_user_balance(
+                target_user_id,
+                amount_value,
+                note=f"Admin balance change {amount_value}",
+                actor_user_id=message.from_user.id,
+            )
+            diff = amount_value
+
+        target_lang = get_user(target_user_id)["language"] or lang
+        try:
+            await bot.send_message(
+                target_user_id,
+                TEXTS[target_lang]["admin_balance_notification"].format(amount=diff, balance=new_balance)
+            )
+        except Exception as e:
+            logging.warning(f"Failed to notify user about balance change: {e}")
+
+        user_temp.pop(message.from_user.id, None)
+        user_state[message.from_user.id] = "admin_panel"
+        await message.answer(
+            f"{TEXTS[lang]['admin_balance_changed']}\n"
+            f"ID: {target_user_id}\n"
+            f"{TEXTS[lang]['admin_balance_current']}: {new_balance}⭐",
+            reply_markup=admin_menu(lang)
+        )
         return
 
     if state == "admin_search_wait":
@@ -3096,8 +2876,13 @@ async def menu(message: types.Message):
         ]
 
         target_user = get_user(target_user_id)
+        lines.append(f"{TEXTS[lang]['balance_label']}: {get_user_balance(target_user_id)}⭐")
+
         if target_user.get("full_name"):
             lines.append(f"{TEXTS[lang]['tutor_name']}: {target_user['full_name']}")
+
+        if target_user.get("telegram_username"):
+            lines.append(f"{TEXTS[lang]['telegram_username_label']}: @{target_user['telegram_username']}")
 
         if target_user.get("phone"):
             lines.append(f"{TEXTS[lang]['tutor_phone']}: {target_user['phone']}")
@@ -3110,7 +2895,7 @@ async def menu(message: types.Message):
 
         if requests:
             for subject, status_code, created_at in requests:
-                lines.append(f"• {localize_subject_value(subject, lang)} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
+                lines.append(f"• {subject} | {get_request_status_text(status_code, lang)} | {created_at[:16]}")
         else:
             lines.append(TEXTS[lang]["no_requests"])
 
@@ -3146,11 +2931,10 @@ async def menu(message: types.Message):
             return
 
         try:
-            reply_user_lang = get_user_interface_language(reply_user_id)
-            await bot.send_message(reply_user_id, f"{TEXTS[reply_user_lang]['admin_message_prefix']}{text}")
+            await bot.send_message(reply_user_id, f"{TEXTS[lang]['admin_message_prefix']}{text}")
             await message.answer(TEXTS[lang]["admin_reply_sent"], reply_markup=admin_menu(lang))
         except Exception as e:
-            await message.answer(TEXTS[lang]["reply_send_error"].format(error=e), reply_markup=admin_menu(lang))
+            await message.answer(f"❌ Не вдалося відправити повідомлення: {e}", reply_markup=admin_menu(lang))
 
         user_temp.pop(message.from_user.id, None)
         user_state[message.from_user.id] = "admin_panel"
@@ -3183,21 +2967,73 @@ async def menu(message: types.Message):
 
     if text == TEXTS[lang]["premium_menu_btn"]:
         user_state[message.from_user.id] = "system_menu"
-        await send_payment_invoice(message.chat.id, lang, "premium_profile")
+        if await try_pay_service_from_balance(message, lang, "premium_profile"):
+            return
+        await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=system_menu(
+            lang,
+            is_admin=is_admin_user(message.from_user.id),
+            is_tutor=is_tutor_user(message.from_user.id)
+        ))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["profile_upgrade_btn"]:
         user_state[message.from_user.id] = "premium_profile_screen"
         await message.answer(TEXTS[lang]["premium_profile_info"], reply_markup=premium_menu(lang))
-        await send_payment_invoice(message.chat.id, lang, "premium_profile")
+        if await try_pay_service_from_balance(message, lang, "premium_profile"):
+            return
+        await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=premium_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["one"]:
-        await send_payment_invoice(message.chat.id, lang, "task")
+        if await try_pay_service_from_balance(message, lang, "task"):
+            return
+        await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=get_task_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Task Payment",
+            description="Single task",
+            payload="task_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Task", amount=250)],
+            start_parameter="task"
+        )
         return
 
     if text == TEXTS[lang]["complex"]:
-        await send_payment_invoice(message.chat.id, lang, "complex")
+        if await try_pay_service_from_balance(message, lang, "complex"):
+            return
+        await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=get_task_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Complex Payment",
+            description="Complex work",
+            payload="complex_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Complex", amount=500)],
+            start_parameter="complex"
+        )
         return
 
     if text == TEXTS[lang]["premium_profile"]:
@@ -3206,7 +3042,19 @@ async def menu(message: types.Message):
             TEXTS[lang]["premium_profile_info"],
             reply_markup=get_task_menu(lang)
         )
-        await send_payment_invoice(message.chat.id, lang, "premium_profile")
+        if await try_pay_service_from_balance(message, lang, "premium_profile"):
+            return
+        await message.answer(TEXTS[lang]["balance_not_enough"], reply_markup=get_task_menu(lang))
+        await bot.send_invoice(
+            chat_id=message.chat.id,
+            title="Premium Profile Payment",
+            description="Unlimited tasks for one month",
+            payload="premium_profile_payment",
+            provider_token="",
+            currency="XTR",
+            prices=[LabeledPrice(label="Premium Profile", amount=2500)],
+            start_parameter="premium_profile"
+        )
         return
 
     if text == TEXTS[lang]["admin_new_requests_btn"]:
@@ -3221,7 +3069,7 @@ async def menu(message: types.Message):
 
         lines = [TEXTS[lang]["admin_new_requests_btn"] + ":"]
         for request_id, user_id, subject, client_name, phone, created_at in rows[:20]:
-            lines.append(f"• #{request_id} | {TEXTS[lang]['profile_user']} {user_id} | {localize_subject_value(subject, lang)} | {client_name} | {phone} | {created_at[:16]}")
+            lines.append(f"• #{request_id} | user {user_id} | {subject} | {client_name} | {phone} | {created_at[:16]}")
 
         await message.answer("\n".join(lines), reply_markup=admin_menu(lang))
         return
@@ -3261,6 +3109,15 @@ async def menu(message: types.Message):
 
         user_state[message.from_user.id] = "admin_reply_user_wait"
         await message.answer(TEXTS[lang]["admin_reply_prompt"], reply_markup=back_menu(lang))
+        return
+
+    if text == TEXTS[lang]["admin_balance_btn"]:
+        if not is_admin_user(message.from_user.id):
+            await message.answer(TEXTS[lang]["no_access"], reply_markup=main_menu(lang))
+            return
+
+        user_state[message.from_user.id] = "admin_balance_lookup_wait"
+        await message.answer(TEXTS[lang]["admin_balance_lookup_prompt"], reply_markup=back_menu(lang))
         return
 
     if text == TEXTS[lang]["admin_panel_title"]:
@@ -3308,22 +3165,22 @@ async def menu(message: types.Message):
         for request_id, user_id, category, subject, client_name, phone, level, goal, preferred_time, lesson_format, created_at, payment_type, payment_amount in rows:
             payment_info = "-"
             if payment_amount and payment_amount > 0:
-                payment_info = f"{get_payment_label(payment_type or '-', lang)} | {payment_amount}⭐"
+                payment_info = f"{payment_type or '-'} | {payment_amount}⭐"
 
             request_text = (
                 f"{TEXTS[lang]['tutor_request_detail_title']} #{request_id}\n\n"
                 f"{TEXTS[lang]['complaint_user_id']}: {user_id}\n"
-                f"{TEXTS[lang]['category_label']}: {localize_category_value(category or '-', lang)}\n"
-                f"{TEXTS[lang]['tutor_subject']}: {localize_subject_value(subject, lang)}\n"
+                f"{TEXTS[lang]['category_label']}: {category or '-'}\n"
+                f"{TEXTS[lang]['tutor_subject']}: {subject}\n"
                 f"{TEXTS[lang]['tutor_name']}: {client_name}\n"
                 f"{TEXTS[lang]['tutor_phone']}: {phone}\n"
                 f"{TEXTS[lang]['level_label']}: {level or '-'}\n"
                 f"{TEXTS[lang]['goal_label']}: {goal or '-'}\n"
                 f"{TEXTS[lang]['preferred_time_label']}: {preferred_time or '-'}\n"
                 f"{TEXTS[lang]['format_label']}: {lesson_format or '-'}\n"
-                f"{TEXTS[lang]['payment_label']}: {payment_info}\n"
+                f"Payment: {payment_info}\n"
                 f"{TEXTS[lang]['status_label']}: {TEXTS[lang]['request_status_new']}\n"
-                f"{TEXTS[lang]['created_label']}: {created_at[:16]}"
+                f"Created: {created_at[:16]}"
             )
             await message.answer(request_text, reply_markup=build_take_request_keyboard(request_id, lang))
         await message.answer(build_tutor_balance_info_text(message.from_user.id, lang), reply_markup=tutor_menu(message.from_user.id, lang))
@@ -3427,10 +3284,17 @@ async def set_bot_commands():
 
 
 async def on_startup(_):
+    global BOT_USERNAME
     init_db()
     ensure_user(OWNER_ID)
     add_admin(OWNER_ID)
     await set_bot_commands()
+
+    try:
+        me = await bot.get_me()
+        BOT_USERNAME = me.username or ""
+    except Exception as e:
+        logging.warning(f"Не вдалося отримати username бота: {e}")
 
     try:
         await check_premium_reminders()
